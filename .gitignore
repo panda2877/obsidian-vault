@@ -1,0 +1,5 @@
+.obsidian/
+*.vault
+*.log
+.DS_Store
+Thumbs.db
