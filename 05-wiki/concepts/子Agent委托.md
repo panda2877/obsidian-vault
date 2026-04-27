@@ -36,4 +36,4 @@ delegate_task工具fork新AIAgent处理复杂子任务。
 ## 相关链接
 
   - [[AIAgent主循环]]
-  - [[PTC vs 普通工具调用]]
+  - [[PTC_vs_普通工具调用对比]]

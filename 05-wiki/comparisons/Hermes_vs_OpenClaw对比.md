@@ -26,7 +26,7 @@ source: 01-学习/ai学习/Hermes Agent架构说明.md
 
 ## 相关链接
 
-  - [[Hermes Agent]]
+  - [[Hermes Agent主体]]
   - [[AIAgent主循环]]
   - [[自进化机制]]
   - [[子Agent委托]]
