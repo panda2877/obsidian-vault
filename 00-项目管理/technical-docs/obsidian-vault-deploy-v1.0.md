@@ -3,15 +3,15 @@ title: obsidian-vault-deploy-v1.0
 created: 2026-04-27
 updated: 2026-04-27
 tags: [project, documentation]
-source: 
+source:
 ---
 
 # Obsidian Vault 部署方案
 
 > 日期：2026-04-27
-> 状态：待审阅
+> 状态：已定稿
 > 版本：v1.0
-> 负责人：幸如音
+> 负责人：文思月
 
 ---
 
@@ -19,205 +19,136 @@ source:
 
 | 版本 | 日期 | 变更类型 | 变更摘要 | 编写者 |
 |------|------|---------|---------|--------|
-| v1.0 | 2026-04-27 | 新增 | Obsidian Vault 安装与 Git 配置部署方案 | 幸如音 |
+| v1.0 | 2026-04-27 | 新增 | Obsidian Vault 安装与 Git 同步方案 | 幸如音 |
+| v1.1 | 2026-04-27 | 更新 | 精简工作流，移除 bare 仓库方案，确立三端同步架构 | 文思月 |
 
 ---
 
 ## 1. 部署目标
 
-在服务器（134.175.163.213）上完成 Obsidian Vault 环境搭建，配置 Git 同步方案，为后续文档迁移和知识库建设奠定基础。
+建立稳定、高效的 Obsidian Vault 三端同步体系，确保服务器、PC端、手机端文档实时一致。
 
 ---
 
-## 2. 前置条件
+## 2. 同步架构
 
-### 2.1 服务器环境检查
-
-| 检查项 | 要求 | 当前状态 |
-|--------|------|---------|
-| Node.js 版本 | ≥ 22.0 | v22.22.2 ✅ |
-| npm 版本 | ≥ 10.0 | 10.9.7 ✅ |
-| Git 版本 | ≥ 2.0 | 已安装 ✅ |
-| SSH 服务 | 正常运行 | 已配置 ✅ |
-| 磁盘空间 | ≥ 1GB | 充足 ✅ |
-
-### 2.2 网络访问需求
-
-- 服务器需可访问 GitHub（用于仓库同步）
-- PC 端需可通过 SSH 访问服务器（用于 Git 操作）
-
----
-
-## 3. 安装步骤
-
-### Phase 1：Obsidian Vault 目录创建
-
-```bash
-# 创建 Obsidian 主目录
-mkdir -p ~/obsidian-vault
-
-# 创建顶级目录结构
-cd ~/obsidian-vault
-mkdir -p "00-项目管理"
-mkdir -p "01-学习"
-mkdir -p "02-资源"
-mkdir -p "03-临时"
-
-# 创建 .gitkeep 确保目录被 Git 追踪
-touch "00-项目管理/.gitkeep"
-touch "01-学习/.gitkeep"
-touch "02-资源/.gitkeep"
-touch "03-临时/.gitkeep"
+```
+┌─────────────┐     git push      ┌──────────────────┐     git push     ┌─────────────┐
+│  服务器端    │ ───────────────→  │      GitHub       │ ←────────────── │   PC / 手机  │
+│  （思月操作） │                  │    （中央仓库）    │    git pull    │  （宝子操作） │
+└─────────────┘                  └──────────────────┘                  └─────────────┘
 ```
 
-### Phase 2：Git 仓库初始化
+### 2.1 各端职责
+
+| 端 | 操作方式 | 说明 |
+|----|---------|------|
+| 服务器端 | 改文件 → git commit → git push | 思月直接在服务器工作目录操作，推送到 GitHub |
+| PC 端 | Obsidian Git 插件 pull/push | 宝子通过 Obsidian Git 与服务器工作目录同步 |
+| 手机端 | Obsidian Git 插件 pull | 宝子手机端从 GitHub pull 查看/编辑 |
+
+---
+
+## 3. 工作流程
+
+### 3.1 服务器端（思月操作）
 
 ```bash
-# 初始化 Git 仓库
+# 1. 进入工作目录
 cd ~/obsidian-vault
-git init
 
-# 配置 Git 用户信息
-git config user.name "Hermes Agent"
-git config user.email "agent@hermes.local"
+# 2. 修改文档...
 
-# 创建 .gitignore
-cat > .gitignore << 'EOF'
-.obsidian/
-*.vault
-*.log
-.DS_Store
-Thumbs.db
-EOF
-
-# 初始提交
+# 3. 提交变更
 git add .
-git commit -m "feat: 初始化 Obsidian Vault 目录结构"
+git commit -m "feat: 描述本次变更内容"
+
+# 4. 推送到 GitHub
+git push origin main
 ```
 
-### Phase 3：GitHub Remote 配置
+### 3.2 PC 端（宝子操作）
 
 ```bash
-# 添加 GitHub 远程仓库（需先在 GitHub 创建空仓库）
-git remote add origin git@github.com:<username>/<repo>.git
+# 1. 配置 Obsidian Git 插件
+#    Remote repository: agentuser@134.175.163.213:/home/agentuser/obsidian-vault
+#    Branch: main
 
-# 或者使用 HTTPS（每次需要输入凭据）
-git remote add origin https://github.com/<username>/<repo>.git
+# 2. 拉取服务器最新内容
+#    Obsidian Git → Pull
 
-# 推送到 GitHub
-git branch -M main
-git push -u origin main
+# 3. 编辑完成后推送
+#    Obsidian Git → Commit → Push
 ```
 
-### Phase 4：服务器裸仓库创建（备选，用于 PC 端通过 SSH 拉取）
+### 3.3 手机端（宝子操作）
 
 ```bash
-# 创建裸仓库作为中转
-mkdir -p ~/git/obsidian-vault.git
-cd ~/git/obsidian-vault.git
-git init --bare
-
-# 配置钩子自动更新工作仓库
-cat > hooks/post-receive << 'EOF'
-#!/bin/bash
-GIT_WORK_TREE=/home/agentuser/obsidian-vault git checkout -f main
-EOF
-chmod +x hooks/post-receive
+# 配置同 PC 端，每次查看前点 Pull 拉取最新内容
 ```
 
 ---
 
-## 4. PC 端配置（待宝子本地执行）
+## 4. 目录结构
 
-### 4.1 安装 Obsidian
-
-1. 下载 Obsidian：https://obsidian.md/download
-2. 安装并打开
-
-### 4.2 配置 obsidian-git 插件
-
-1. 打开 Obsidian → 设置 → 第三方插件 → 关闭安全模式
-2. 在社区插件中搜索 "obsidian-git" 并安装
-3. 配置插件设置：
-   - Remote repository: `git@github.com:<username>/<repo>.git`
-   - Auto backup interval: 5（分钟）
-   - Enable status bar: ✅
-
-### 4.3 克隆仓库到本地
-
-```bash
-git clone git@github.com:<username>/<repo>.git ~/Obsidian/Vault
+```
+~/obsidian-vault/
+├── 00-项目管理/
+│   └── technical-docs/
+│       └── obsidian-vault-deploy-v1.0.md   # 本文档
+├── 01-学习/
+├── 02-资源/
+├── 03-临时/
+└── .git/                                    # 工作目录 Git（非 bare 仓库）
 ```
 
 ---
 
-## 5. 验证方法
+## 5. 注意事项
 
-### 5.1 服务器端验证
+1. **服务器直接操作工作目录**，无需 hook 或 bare 仓库中转
+2. **不要在 .obsidian 目录内编辑**，这是 Obsidian 的配置目录
+3. **大型二进制文件不要放入 Vault**，会导致 Git 仓库膨胀
+4. **多人编辑时注意冲突**，obsidian-git 提供了基本的冲突提示
+5. **PC/手机端 push 前先 pull**，避免冲突覆盖
+
+---
+
+## 6. 验证方法
+
+### 6.1 服务器端验证
 
 ```bash
-# 检查目录结构
-ls -la ~/obsidian-vault/
-
 # 检查 Git 状态
 cd ~/obsidian-vault && git status
 
-# 检查 GitHub 连接
+# 检查提交历史
+git log --oneline -3
+
+# 验证 GitHub 连接
 git fetch origin
 ```
 
-### 5.2 PC 端验证
+### 6.2 PC/手机端验证
 
-1. 打开 Obsidian，选择刚才克隆的仓库作为 Vault
-2. 创建一篇测试笔记，保存
-3. 等待 5 分钟，检查 GitHub 是否有新提交
-4. 在服务器上 `git pull` 确认同步成功
+1. 打开 Obsidian，选择 Vault
+2. 点击 Obsidian Git → Pull，确认无报错
+3. 查看文档是否为最新版本
 
 ---
 
-## 6. 回滚方案
+## 7. 常见问题
 
-### 6.1 Git 回滚
-
-```bash
-# 查看提交历史
-git log --oneline
-
-# 回滚到上一个版本
-git reset --hard HEAD^
-
-# 强制推送到远程（慎用）
-git push --force origin main
+### Q: PC 端 push 失败，显示 "remote not found"？
+**A:** 检查 Obsidian Git 插件的 Remote repository 配置是否为：
+```
+agentuser@134.175.163.213:/home/agentuser/obsidian-vault
 ```
 
-### 6.2 目录重建
-
-若目录损坏，可重新克隆：
-
-```bash
-cd ~
-rm -rf obsidian-vault
-git clone git@github.com:<username>/<repo>.git obsidian-vault
-```
+### Q: 出现冲突怎么办？
+**A:** 先 `git stash` 暂存本地修改，再 `pull`，然后 `git stash pop` 合并，最后手动解决冲突后提交。
 
 ---
 
-## 7. 注意事项
-
-1. **不要在 .obsidian 目录内编辑**，这是 Obsidian 的配置目录
-2. **大型二进制文件不要放入 Vault**，会导致 Git 仓库膨胀
-3. **多人编辑时注意冲突**，obsidian-git 提供了基本的冲突提示
-4. **定期检查 GitHub 仓库**，确保同步正常
-
----
-
-## 8. 后续步骤
-
-- [ ] 思月文档迁移（详见《Obsidian知识库搭建技术方案》Phase 2）
-- [x] obsidian-git 插件配置
-- [x] PC 端 Vault 设置
-
----
-
-*本文档由 Hermes Agent 技术团队编写*
-*日期：2026-04-27*
+*本文档由 Hermes Agent 文档团队编写*
+*最后更新：2026-04-27 文思月*
