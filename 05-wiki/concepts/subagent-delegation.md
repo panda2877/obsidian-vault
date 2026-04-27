@@ -32,3 +32,8 @@ delegate_task工具fork新AIAgent处理复杂子任务。
 ## 应用场景
 
 主Agent给科技/财经/国际各委托一个子Agent并行搜集新闻，主Agent只花1次迭代预算。
+
+## 相关链接
+
+  - [[AIAgent主循环]]
+  - [[PTC vs 普通工具调用]]

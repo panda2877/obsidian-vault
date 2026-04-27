@@ -25,3 +25,7 @@ Hermes平台适配器基类。
 - Slack：WebSocket
 - Email：IMAP
 - SMS：Twilio HTTP Webhook
+
+## 相关链接
+
+  - [[适配器模式设计取舍]]

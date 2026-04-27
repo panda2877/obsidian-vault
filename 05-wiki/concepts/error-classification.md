@@ -38,3 +38,8 @@ Hermes按错误分类各走各的恢复路径。
 每轮开头检查_interrupt_requested。触发时：
 - break出循环，持久化已有结果
 - 补一个伪造的错误tool result，保证消息结构合法，下次恢复不被Provider拒
+
+## 相关链接
+
+  - [[AIAgent主循环]]
+  - [[上下文压缩]]

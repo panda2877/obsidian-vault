@@ -49,3 +49,13 @@ while iteration_budget.remaining > 0:
 - **禁用5个工具**：delegate_task/clarify/memory/send_message/execute_code
 - **硬约束**：深度只有1层，并发上限3个
 - **级联中断**：父每30秒心跳，子Agent在父中断后连锁停下
+
+## 相关链接
+
+  - [[迭代预算机制]]
+  - [[工具并行执行]]
+  - [[子Agent委托]]
+  - [[系统提示词工程]]
+  - [[记忆系统]]
+  - [[上下文压缩]]
+  - [[错误分类与恢复]]

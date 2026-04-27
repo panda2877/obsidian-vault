@@ -31,3 +31,8 @@ source: 01-学习/ai学习/Hermes Agent架构说明.md
 - session_search能搜到历史 ≠ Agent记住了
 - session_search是按需检索，结果只是当次推理的临时上下文
 - 真正持久的记忆只有一条路：模型主动调memory工具写入MEMORY.md
+
+## 相关链接
+
+  - [[AIAgent主循环]]
+  - [[记忆系统]]
