@@ -214,8 +214,8 @@ git clone git@github.com:<username>/<repo>.git obsidian-vault
 ## 8. 后续步骤
 
 - [ ] 思月文档迁移（详见《Obsidian知识库搭建技术方案》Phase 2）
-- [ ] obsidian-git 插件配置
-- [ ] PC 端 Vault 设置
+- [x] obsidian-git 插件配置
+- [x] PC 端 Vault 设置
 
 ---
 
