@@ -334,7 +334,24 @@ LLM-Wiki 词条重命名流程
 
 ---
 
-## 九、关联文档
+## 九、踩坑记录
+
+### 9.1 Obsidian Vault Git 操作踩坑（2026-04-27）
+
+| 踩坑 | 教训 |
+|------|------|
+| 执行 `git add -u` 时没有指定具体路径，导致非目标文件也被 staged | 涉及多文件操作时，必须指定具体路径，不能用 `-u` 全局标记 |
+| 文档归档时，把文件放到了 `~/.hermes/docs-archive/` 而非 Obsidian Vault | 归档前先确认目标仓库路径 |
+| 删除旧文档前没检查是否有宝子未提交的文档 | 删除操作前先 `git status` 确认工作区状态 |
+
+**规范更新**：
+- Obsidian Vault 操作前必须 `git status` 确认工作区干净
+- 删除/移动文件时，明确指定文件路径，不用全局参数
+- 归档到 Obsidian Vault 时，直接放在 Vault 内，不要先放到临时目录再移
+
+---
+
+## 十、关联文档
 
 - [Obsidian Vault 仓库](https://github.com/panda2877/obsidian-vault)
 - wiki 文件目录：`05-wiki/entities/`、`05-wiki/concepts/`、`05-wiki/comparisons/`、`05-wiki/queries/`
