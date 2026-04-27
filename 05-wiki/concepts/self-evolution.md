@@ -1,0 +1,35 @@
+---
+id: self-evolution
+tags: [concept, hermes, skills]
+created: 2026-04-27
+source: 01-学习/ai学习/Hermes Agent架构说明.md
+---
+
+# 自进化机制
+
+Hermes的核心差异化能力：经验自动沉淀为技能。
+
+## 技能系统
+
+Skills目录里的Markdown文档，存的是"做过之后沉淀下来的操作笔记"。
+
+会话启动时，标题和简介拼成紧凑目录塞进系统提示词，模型按需用skill_view加载。
+
+## 两条信号触发写入
+
+**信号一**：系统提示词里的主动引导（SKILLS_GUIDANCE），告诉模型"复杂任务完成后主动存、用到过时的技能立即patch"。
+
+**信号二**：后台强制复盘。默认每10轮模型推理触发一次（与迭代预算同一计数），在独立后台线程fork一个mini Agent：
+- max_iterations=8
+- 任务：判断这段对话有没有非平凡的方法（试错过/中途改主意/结果不符合期待）
+- 有就写新技能或更新旧技能，没有就退出
+
+## 关键设计
+
+> Background memory/skill review——runs AFTER the response is delivered so it never competes with the user's task for model attention.
+
+后台线程在回复发给用户之后才启动，不和用户正在等的响应抢资源。
+
+## 效果
+
+用户看不到它在学，但每过10轮推理，就可能有一段新经验沉淀进技能库。下次遇到类似任务，不用从头摸索。
