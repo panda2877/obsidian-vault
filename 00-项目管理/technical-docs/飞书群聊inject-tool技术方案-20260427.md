@@ -10,8 +10,6 @@ related_docs: []
 
 # 飞书群聊 Inject Tool 技术方案
 
-- todo：确认一下，这个方案下，群里面的session数量
-
 ## 1. 问题背景
 
 ### 1.1 现状问题
