@@ -23,11 +23,11 @@ Claude Code 是 Anthropic 官方推出的 CLI 编程代理工具，基于 Claude
 
 ### 2.1 前置要求
 
-| 要求 | 说明 |
-|------|------|
-| Node.js | v18+（Claude Code 基于 Node.js） |
-| npm / npx | 用于全局安装 |
-| Claude 账户 | Pro / Max 订阅，或 API Key |
+| 要求        | 说明                           |
+| --------- | ---------------------------- |
+| Node.js   | v18+（Claude Code 基于 Node.js） |
+| npm / npx | 用于全局安装                       |
+| Claude 账户 | Pro / Max 订阅，或 API Key       |
 
 ```bash
 # 检查 Node.js 版本
@@ -231,17 +231,17 @@ claude -r <session_id>
 
 **常用斜杠命令：**
 
-| 命令 | 用途 |
-|------|------|
+| 命令                 | 用途           |
+| ------------------ | ------------ |
 | `/compact [focus]` | 压缩上下文，保留关键信息 |
-| `/review` | 代码审查 |
-| `/security-review` | 安全分析 |
-| `/plan [描述]` | 进入计划模式 |
-| `/model [模型]` | 切换模型 |
-| `/effort [级别]` | 调整推理深度 |
-| `/clear` | 清空对话历史 |
-| `/context` | 查看上下文使用率 |
-| `/exit` | 退出会话 |
+| `/review`          | 代码审查         |
+| `/security-review` | 安全分析         |
+| `/plan [描述]`       | 进入计划模式       |
+| `/model [模型]`      | 切换模型         |
+| `/effort [级别]`     | 调整推理深度       |
+| `/clear`           | 清空对话历史       |
+| `/context`         | 查看上下文使用率     |
+| `/exit`            | 退出会话         |
 
 ---
 
