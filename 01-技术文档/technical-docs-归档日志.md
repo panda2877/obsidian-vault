@@ -6,6 +6,7 @@
 
 **新增文档**：
 - 《Hermes Agent 部署指南》— 涵盖 API 接入（20+ LLM 提供商配置）、渠道接入（飞书、微信、Telegram 等平台）、记忆系统配置、Skills 自学习机制、Profiles 多实例隔离、API Server 模式、定时任务、MCP 集成等，共 12 个章节 + 架构图
+- 《Claude Code 安装配置完整指南》— 全平台安装、认证配置、基础配置、Print 模式/交互 REPL 两种使用模式、MCP 扩展、子 Agent、Git 集成、tmux 编排、国内 OpenRouter/SiliconFlow 兼容配置、常见问题等
 
 **编写者**：文思月
 
