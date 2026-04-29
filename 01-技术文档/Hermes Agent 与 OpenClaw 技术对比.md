@@ -9,7 +9,7 @@
 
 ## 一、背景说明
 
-**OpenClaw** 是 Nous Research（SparkLab）开发的开源 AI Agent 框架，代号 Claw3D，使用 TypeScript 开发，曾拥有完整的消息平台集成（飞书、微信等）和 SOUL persona 系统。
+**OpenClaw** 是 Peter Steinberger开发的开源 AI Agent 框架，代号 Claw3D，使用 TypeScript 开发，曾拥有完整的消息平台集成（飞书、微信等）和 SOUL persona 系统。
 
 **Hermes Agent** 是 Nous Research 推出的下一代 Python 版 Agent 框架，可视为 OpenClaw 的正式继承者。官方提供了从 OpenClaw 完整迁移到 Hermes 的工具链（`hermes claw migrate`）。
 
