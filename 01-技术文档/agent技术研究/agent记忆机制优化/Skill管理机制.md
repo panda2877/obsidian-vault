@@ -1,11 +1,12 @@
 # Skill管理机制
 
 > 创建时间：2026-04-29
-> 版本：v2.1
+> 版本：v2.2
 > 负责人：如音
 > 用途：建立Skill索引体系、分工防护硬拦截、sub-agent信任积分机制
 >
 > 变更记录：
+> - v2.2：3.1硬拦截和5.1自动记录章节中 skill-index 提法 → skill_view()读取SKILL.md metadata
 > - v2.1：Skill索引机制改为 Native Only + Metadata in SKILL.md 方案，废弃 skill-index-ext.json 独立索引层
 > - v2.0：拆分自《多Agent记忆机制优化方案》，删除10.9待落地事项（已移至实施方案文档）
 
@@ -131,13 +132,13 @@ owner = 如音/紫灵/思月 → delegate_task 委托执行
 
 ### 3.1 硬拦截
 
-银月调用任何 skill 前，必须经过 skill-index 匹配。
+银月调用任何 skill 前，必须读取 SKILL.md metadata.owner 进行分工校验。
 
 ```
 银月尝试直接调用 [非shared skill]
     │
     ▼
-skill-index 校验 owner
+skill_view() 加载 SKILL.md → 读取 metadata.owner
     │
     ├── owner = shared → 允许调用
     │
@@ -241,7 +242,7 @@ skill-index 校验 owner
 skill 执行完毕
     │
     ▼
-skill_index 工具：读取 SKILL.md frontmatter.metadata
+skill_view() 读取 SKILL.md frontmatter.metadata
     │
     ├── match_stats.total += 1
     ├── match_stats.true_positive += 1  或  false_positive += 1
@@ -458,4 +459,4 @@ Hermes Skill 索引巡检报告
 ---
 
 > 关联文档：[[多Agent记忆机制优化方案]] — 记忆机制主文档
-> 关联文档：[[多Agent记忆机制优化实施方案]] — 待落地事项与实施框架
+> 关联文档：[[Agent记忆机制优化实施落地方案]] — 待落地事项与实施框架
