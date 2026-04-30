@@ -1,12 +1,12 @@
 # Agent记忆机制优化实施落地方案
 
 > 创建时间：2026-04-30
-> 版本：v1.0
+> 版本：v1.2
 > 负责人：如音
 > 用途：将《多Agent记忆机制优化实施方案》细化为可逐项落地、可验收的完整操作手册
 >
 > 变更记录：
-> - v1.0：细化所有待落地事项（L1-L6），每个事项补充具体命令/脚本/验证节点；按 P0/P1/P2 重新排布落地顺序；新增验收标准章节
+> - v1.2：Skill索引机制改为 Native Only + Metadata in SKILL.md（L1/L2实施章节对应修订）
 > - v1.1：修正记忆路径——银月（main-agent）记忆在 `~/.hermes/memory/`，其他人（含如音/思月/紫灵）在 `~/.hermes/profiles/{name}/memories/`
 
 ---
@@ -25,7 +25,7 @@
 └── 公共配置：~/.hermes/profiles/shared/
 
 支撑系统：
-├── Skill索引体系（skills-index.json + MEMORY.md索引摘要）
+├── Skill索引体系（Native Only + Metadata in SKILL.md，metadata 按需读取）
 ├── 分工防护硬拦截（owner校验 + 豁免审批）
 ├── 心跳巡检Cronjob（各姐妹独立 + 1个全局汇总）
 └── sub-agent信任积分（积分联动权限）
@@ -38,8 +38,8 @@
 | 层级 | 事项 | 落地内容 | 状态 | 验收标准 |
 |------|------|---------|------|---------|
 | **P0** | **L0** | **各姐妹精简自己的MEMORY.md**（按模板 ≤1800字符） | 待落地 | 字符数 <1800，可正常加载 |
-| P0 | L1 | 初始化 skills-index.json（扫描 + 生成JSON索引） | 待落地 | JSON可读，条目数量与skills/目录一致 |
-| P0 | L2 | 手工补充 owner 归属（银月填写） | 待落地 | 所有条目owner非空 |
+| P0 | L1 | 批量补充 metadata（owner、trigger_scenes）到已有 SKILL.md | 待落地 | metadata.owner 非空，metadata.trigger_scenes 已填充 |
+| P0 | L2 | 手工校正 metadata.owner（如音/思月/紫灵专属skill归属确认） | 待落地 | 所有条目 owner 非空 |
 | **P1** | **L3-a** | **创建巡检Cronjob**（各姐妹每日21:00） | 待落地 | Cron创建成功，次日有日志输出 |
 | P1 | L3-b | 初始化 MEMORY.md 索引摘要（启动时同步索引） | 待落地 | 各姐妹MEMORY.md含索引表 |
 | P1 | L3-c | 固化启动时读取日志流程（写MEMORY.md） | 待落地 | 新session读取近3日日志 |
@@ -123,129 +123,181 @@ wc -l ~/.hermes/memory/MEMORY.md
 
 ---
 
-## 五、L1 实施：初始化 skills-index.json（P0）
+## 五、L1 实施：批量补充 metadata 到 SKILL.md（P0）
 
-### 5.1 扫描脚本
+### 5.1 方案说明
+
+Native Only + Metadata in SKILL.md 方案下，无需独立 `skills-index.json`。优化数据（owner、trigger_scenes、match_stats、inferred_triggers）直接写入各 SKILL.md 的 frontmatter.metadata。
+
+本步骤用脚本批量扫描所有 SKILL.md，为缺少 metadata 的 skill 补充初始结构。
+
+### 5.2 批量补充脚本
 
 ```bash
 #!/bin/bash
-# ~/.hermes/scripts/generate-skills-index.sh
+# ~/.hermes/scripts/init-skills-metadata.sh
+# 批量为所有 SKILL.md 补充 frontmatter.metadata 字段
 
 SKILLS_DIR="$HOME/.hermes/skills"
-INDEX_FILE="$HOME/.hermes/skills-index/skills-index.json"
-INDEX_MD="$HOME/.hermes/skills-index/skills-index.md"
 
-mkdir -p "$(dirname "$INDEX_FILE")"
-
-# 生成 JSON
-echo '{' > "$INDEX_FILE"
-echo '  "version": "2026-04-30",' >> "$INDEX_FILE"
-echo '  "skills": [' >> "$INDEX_FILE"
-
-first=true
 find "$SKILLS_DIR" -name "SKILL.md" | sort | while read sk; do
-  dir=$(dirname "$sk")
-  skill_name=$(basename "$dir")
-  category=$(basename "$(dirname "$dir")")
-  
-  # 提取description（取第一段非标题内容）
-  desc=$(sed -n '/^# /d; /^$/d; /^[>]/d; p' "$sk" | head -3 | tr '\n' ' ' | sed 's/"/\\"/g' | cut -c1-120)
-  [ -z "$desc" ] && desc="待补充"
+  skill_name=$(basename "$(dirname "$sk")")
+  category=$(basename "$(dirname "$(dirname "$sk")")")
 
-  # 提取trigger_scenes（如有）
-  trigger=$(grep -A 20 "^trigger_scenes\|^## Trigger\|^### 触发" "$sk" 2>/dev/null | grep -E "^\s*[-*]|\"" | head -5 | sed 's/.*[:：]\s*//; s/"/\\"/g' | tr '\n' ',' | sed 's/,$//')
-  [ -z "$trigger" ] && trigger=""
+  echo "处理: $skill_name ($category)"
 
-  if [ "$first" = true ]; then
-    first=false
-  else
-    echo ',' >> "$INDEX_FILE"
+  # 检查是否已有 metadata
+  if grep -q "^metadata:" "$sk" 2>/dev/null; then
+    echo "  → 已有 metadata，跳过"
+    continue
   fi
 
-  cat >> "$INDEX_FILE" <<EOF
-    {
-      "name": "$skill_name",
-      "path": "$category/$skill_name",
-      "owner": "shared",
-      "category": "$category",
-      "purpose": "$desc",
-      "trigger_scenes": [$([ -n "$trigger" ] && echo "\"$(echo $trigger | sed 's/,/\",\"/g')\"" || echo "")],
-      "keywords": [],
-      "dependencies": [],
-      "last_updated": "2026-04-30"
-    }
+  # 推断 owner
+  case "$category" in
+    software-development|mlops|devops|github|gaming)
+      owner="xingruyin" ;;
+    productivity)
+      owner="wensiyue" ;;
+    research)
+      owner="ziling" ;;
+    autonomous-ai-agents|media|social-media|smart-home|red-teaming)
+      owner="shared" ;;
+    *)
+      owner="shared" ;;
+  esac
+
+  # 追加 metadata 到 frontmatter（YAML block）
+  # 在 --- 行之后、# skill title 之前插入
+  python3 << EOF
+import re
+
+with open("$sk", "r") as f:
+  content = f.read()
+
+metadata_block = """metadata:
+  owner: $owner
+  trigger_scenes: []
+  inferred_triggers: []
+  dependencies: []
+  match_stats:
+    total: 0
+    true_positive: 0
+    false_positive: 0
+    last_used: null
+"""
+
+# 找到第一个 --- 之后的位置插入
+parts = content.split("---", 2)
+if len(parts) >= 3:
+  new_content = parts[0] + "---" + parts[1] + "---" + metadata_block + parts[2]
+  with open("$sk", "w") as f:
+    f.write(new_content)
+  print("  → metadata 补充完成")
+else:
+  print("  → SKILL.md 格式异常，跳过")
 EOF
 done
-
-echo '' >> "$INDEX_FILE"
-echo '  ]' >> "$INDEX_FILE"
-echo '}' >> "$INDEX_FILE"
-
-echo "✅ skills-index.json 生成完成"
-echo "   条目数：$(grep '"name":' "$INDEX_FILE" | wc -l)"
 ```
 
-### 5.2 执行命令
+### 5.3 执行命令
 
 ```bash
-chmod +x ~/.hermes/scripts/generate-skills-index.sh
-mkdir -p ~/.hermes/scripts ~/.hermes/skills-index
-~/.hermes/scripts/generate-skills-index.sh
+chmod +x ~/.hermes/scripts/init-skills-metadata.sh
+mkdir -p ~/.hermes/scripts
+~/.hermes/scripts/init-skills-metadata.sh
 
-# 验证
-cat ~/.hermes/skills-index/skills-index.json | python3 -m json.tool > /dev/null && echo "✅ JSON格式正确"
+# 验证：检查已有 metadata 的数量
+echo "=== 验证 ==="
+total=$(find ~/.hermes/skills -name "SKILL.md" | wc -l)
+with_meta=$(grep -l "^metadata:" ~/.hermes/skills/*/SKILL.md 2>/dev/null | wc -l)
+echo "总 skill 数：$total"
+echo "已有 metadata：$with_meta"
 ```
 
-### 4.3 验收标准
+### 5.4 验收标准
 
-- [ ] `~/.hermes/skills-index/skills-index.json` 存在且为合法JSON
-- [ ] `skills-index.json` 条目数 == `find ~/.hermes/skills/ -name "SKILL.md" | wc -l`
-- [ ] 所有条目的 `owner` 字段值 = `"shared"`（待L2补充）
-- [ ] `python3 -m json.tool skills-index.json` 无报错
+- [ ] `~/.hermes/skills/` 下所有 SKILL.md 均含 `metadata.owner` 字段
+- [ ] `metadata.owner` 预填值符合推断规则（shared/如音/思月/紫灵）
+- [ ] `metadata.trigger_scenes` 初始化为空列表 `[]`（待 L1b 补充）
+- [ ] `metadata.match_stats` 初始化为零值
 
 ---
 
-## 六、L2 实施：手工补充 owner 归属（P0）
+## 六、L1b 实施：AI 批量补充 trigger_scenes（P0）
 
-### 6.1 补充原则
+### 6.1 说明
 
-| category 前缀 | 推断 owner |
-|--------------|-----------|
-| `software-development` / `mlops` / `devops` / `github` / `gaming` | `xingruyin`（如音） |
-| `productivity`（docs/powerpoint/note-taking相关） | `wensiyue`（思月） |
-| `research`（需求/创意/ideation） | `ziling`（紫灵） |
-| `autonomous-ai-agents` / `media` / `social-media` / `smart-home` / `red-teaming` | `shared`（共享） |
-| 跨职能通用 | `shared` |
+trigger_scenes 是中文触发场景，对中文匹配至关重要。空列表由 AI 读取 SKILL.md 全文后自动补充。
 
-### 6.2 执行方式
+### 6.2 批量补充命令
 
-银月手工编辑 `~/.hermes/skills-index/skills-index.json`，将所有 `owner` 为 `"shared"` 的条目按上表修正。
-
-**命令**：
 ```bash
-# 查看当前 owner 分布
-cat ~/.hermes/skills-index/skills-index.json | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-from collections import Counter
-owners=Counter(s.get('owner','缺失') for s in d['skills'])
-for k,v in owners.items(): print(f'{k}: {v}')
-"
+#!/bin/bash
+# ~/.hermes/scripts/extract-triggers.sh
+# 读取所有 SKILL.md，提取 trigger_scenes 并回填
 
-# 查看需要手工补充的条目
-cat ~/.hermes/skills-index/skills-index.json | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for s in d['skills']:
-    if s.get('owner')=='shared':
-        print(f\"  {s['name']} ({s['category']})\")
-"
+SKILLS_DIR="$HOME/.hermes/skills"
+
+for sk in $(find "$SKILLS_DIR" -name "SKILL.md"); do
+  skill_name=$(basename "$(dirname "$sk")")
+  echo "=== $skill_name ==="
+
+  # 读取 SKILL.md 全文（限制前 4000 字符）
+  content=$(head -c 4000 "$sk")
+
+  # AI 提取（使用当前 session 的 LLM）
+  # 这里输出 prompt，实际执行由 agent 完成
+  echo "$content" | head -50
+  echo "..."
+done
 ```
+
+> **说明**：trigger_scenes 的 AI 提取由巡检 cronjob 在每日 03:00 自动执行。本步骤仅确保 metadata 结构存在。
 
 ### 6.3 验收标准
 
-- [ ] 所有条目 `owner` 非空
-- [ ] `owner` 只能是：`xingruyin`、`ziling`、`wensiyue`、`shared`
+- [ ] 所有 SKILL.md 含 `metadata.trigger_scenes` 字段（空列表亦可）
+- [ ] 巡检启动后，非空 trigger_scenes 数量 ≥ 10
+
+---
+
+## 七、L2 实施：手工校正 metadata.owner（P0）
+
+### 7.1 补充原则
+
+| category 前缀 | 推断 owner（预填） | 需手工确认 |
+|--------------|-------------------|-----------|
+| `software-development` / `mlops` / `devops` / `github` / `gaming` | `xingruyin` | 是 |
+| `productivity`（docs/powerpoint/note-taking相关） | `wensiyue` | 是 |
+| `research`（需求/创意/ideation） | `ziling` | 是 |
+| `autonomous-ai-agents` / `media` / `social-media` / `smart-home` / `red-teaming` | `shared` | 否 |
+| 跨职能通用 | `shared` | 否 |
+
+### 7.2 执行方式
+
+银月手工编辑 `~/.hermes/skills/<category>/<skill>/SKILL.md`，修正 `metadata.owner` 值。
+
+**查看当前 owner 分布**：
+```bash
+echo "=== 各 owner 数量 ==="
+for f in ~/.hermes/skills/*/SKILL.md; do
+  owner=$(awk '/^metadata:/,/^[^ ]/{if(/^  owner:/)print $2}' "$f" 2>/dev/null)
+  echo "$owner"
+done | sort | uniq -c | sort -rn
+```
+
+**查看需要确认的条目（owner = xingruyin/wensiyue/ziling）**：
+```bash
+echo "=== 如音专属（需确认）==="
+grep -rl "owner: xingruyin" ~/.hermes/skills/*/SKILL.md | while read f; do
+  echo "  $(basename $(dirname $f))"
+done
+```
+
+### 7.3 验收标准
+
+- [ ] 所有条目 `metadata.owner` 非空
+- [ ] `metadata.owner` 只能是：`xingruyin`、`ziling`、`wensiyue`、`shared`
 - [ ] 人工确认各专属skill归属正确
 
 ---
@@ -442,7 +494,7 @@ done
 银月尝试调用 [skill-name]
     │
     ▼
-skill-index 校验 owner
+skill_view() 加载 SKILL.md → 读取 metadata.owner
     │
     ├── owner = shared → 允许调用
     │
@@ -461,19 +513,21 @@ skill-index 校验 owner
 
 ### 12.2 实施位置
 
-硬拦截逻辑在银月的 skill 调用入口实现（即 `delegate_task` 之前）。
+硬拦截逻辑在银月的 skill 调用入口实现。metadata.owner 在 `skill_view()` 读取 SKILL.md 时按需获取，无需独立索引文件。
 
 **实现伪代码**（由银月/网关侧执行）：
 
 ```python
 def call_skill(skill_name, caller_agent):
-    # 1. 读取 skills-index.json
-    skill_info = get_skill_info(skill_name)  # 包含 owner 字段
+    # 1. 读取 SKILL.md frontmatter.metadata
+    skill_md_path = f"~/.hermes/skills/{skill_name}/SKILL.md"
+    frontmatter = parse_yaml_frontmatter(skill_md_path)
+    owner = frontmatter.get("metadata", {}).get("owner", "shared")
 
     # 2. 校验 owner
-    if skill_info['owner'] == 'shared':
+    if owner == "shared":
         return execute_skill(skill_name)
-    elif skill_info['owner'] == caller_agent:
+    elif owner == caller_agent:
         return execute_skill(skill_name)  # 自己调用自己，可以
     else:
         # 触发豁免审批流程（L6）
@@ -500,7 +554,7 @@ def call_skill(skill_name, caller_agent):
 
 ### 13.1 Cronjob 配置
 
-**触发时间**：每天 09:00（北京时间）
+**触发时间**：每天 03:00（北京时间）
 
 **执行用户**：银月（main-agent）
 
@@ -509,12 +563,12 @@ hermes cron create \
   --name "Hermes-记忆库全局巡检" \
   --profile yinyue \
   --message "执行记忆库全局巡检：
-1. 扫描 ~/.hermes/skills/ 目录，与 skills-index.json 比对一致性
+1. rglob扫描 ~/.hermes/skills/ 下所有 SKILL.md，检查 metadata 完整性
 2. 读取 ~/.hermes/logs/bypass.log，统计拦截次数
 3. 计算各 sub-agent 积分（基于本周操作日志）
 4. 生成巡检报告，推送飞书
 5. 发现未归档内容 → 通知思月" \
-  --schedule "0 9 * * *" \
+  --schedule "0 3 * * *" \
   --deliver origin
 ```
 
@@ -567,18 +621,18 @@ hermes cron create \
 ## 十五、落地里程碑
 
 ```
-Milestone 1（P0 完成标志）：L0 + L1 + L2 完成
-  → 技能：skills-index.json 完整且owner已填写
+Milestone 1（P0 完成标志）：L0 + L1 + L1b + L2 完成
+  → 技能：所有 SKILL.md 含 metadata.owner + metadata.trigger_scenes
   → 记忆：各MEMORY.md ≤1800字符（含银月特殊路径）
 
 Milestone 2（P1 完成标志）：L3-a/b/c/d 完成
   → 自动化：每日21:00巡检cron运行
   → 启动：各MEMORY.md含启动流程和任务交接规范
-  → 索引：各MEMORY.md含skill索引摘要
+  → 索引：各MEMORY.md含skill索引摘要（Native Only）
 
 Milestone 3（P2 完成标志）：L4 + L5 + L6 完成
-  → 安全：分工硬拦截生效
-  → 运维：全局巡检cron + 周报运行
+  → 安全：分工硬拦截生效（读取SKILL.md metadata.owner）
+  → 运维：全局巡检cron（03:00）+ 周报运行
   → 审批：豁免流程可交互
 ```
 
@@ -591,9 +645,9 @@ Milestone 3（P2 完成标志）：L4 + L5 + L6 完成
 - [ ] 思月 MEMORY.md ≤1800 字符（路径：`~/.hermes/profiles/wensiyue/memories/MEMORY.md`）
 - [ ] 紫灵 MEMORY.md ≤1800 字符（路径：`~/.hermes/profiles/ziling/memories/MEMORY.md`）
 - [ ] 银月 MEMORY.md ≤1800 字符（路径：`~/.hermes/memory/MEMORY.md`）
-- [ ] skills-index.json 存在且JSON合法
-- [ ] skills-index.json 条目数与 skills/ 目录一致
-- [ ] 所有条目 owner 非空，归属正确
+- [ ] 所有 SKILL.md 含 `metadata.owner`（非空）
+- [ ] 所有 SKILL.md 含 `metadata.trigger_scenes`（可为空列表）
+- [ ] `metadata.owner` 归属正确（shared/如音/思月/紫灵）
 
 ### P1（核心自动化）
 - [ ] 3条独立巡检cron创建成功（21:00）
