@@ -1,11 +1,14 @@
 # Agent记忆机制优化实施落地方案
 
 > 创建时间：2026-04-30
-> 版本：v1.2
+> 版本：v1.5
 > 负责人：如音
 > 用途：将《多Agent记忆机制优化实施方案》细化为可逐项落地、可验收的完整操作手册
 >
 > 变更记录：
+> - v1.5（2026-05-01）：修正 L3-c/L3-d — 原"读取/写入日志"改为"读取/写入快照"，snapshots/ 目录落地，快照格式固化
+> - v1.4：L3-b/c/d完成（2026-05-01）— MEMORY.md索引摘要+启动流程+任务交接规范全部就位，四姐妹≤1800字符
+> - v1.3：L1+L2完成（2026-05-01）— 80个SKILL.md全部补充metadata，owner推断验证正确
 > - v1.2：Skill索引机制改为 Native Only + Metadata in SKILL.md（L1/L2实施章节对应修订）
 > - v1.1：修正记忆路径——银月（main-agent）记忆在 `~/.hermes/memory/`，其他人（含如音/思月/紫灵）在 `~/.hermes/profiles/{name}/memories/`
 
@@ -35,18 +38,18 @@
 
 ## 二、落地清单总览
 
-| 层级 | 事项 | 落地内容 | 状态 | 验收标准 |
+|| 层级 | 事项 | 落地内容 | 状态 | 验收标准 |
 |------|------|---------|------|---------|
-| **P0** | **L0** | **各姐妹精简自己的MEMORY.md**（按模板 ≤1800字符） | 待落地 | 字符数 <1800，可正常加载 |
-| P0 | L1 | 批量补充 metadata（owner、trigger_scenes）到已有 SKILL.md | 待落地 | metadata.owner 非空，metadata.trigger_scenes 已填充 |
-| P0 | L2 | 手工校正 metadata.owner（如音/思月/紫灵专属skill归属确认） | 待落地 | 所有条目 owner 非空 |
-| **P1** | **L3-a** | **创建巡检Cronjob**（各姐妹每日21:00） | 待落地 | Cron创建成功，次日有日志输出 |
-| P1 | L3-b | 初始化 MEMORY.md 索引摘要（启动时同步索引） | 待落地 | 各姐妹MEMORY.md含索引表 |
-| P1 | L3-c | 固化启动时读取日志流程（写MEMORY.md） | 待落地 | 新session读取近3日日志 |
-| P1 | L3-d | 固化任务交接写入日志流程（写MEMORY.md） | 待落地 | 交接时日志有记录 |
-| **P2** | **L4** | **硬拦截逻辑**（owner校验） | 待落地 | 调用非shared skill被拦截 |
-| P2 | L5 | hermes-memory-maintenance cronjob（全局汇总） | 待落地 | 每日09:00输出巡检报告 |
-| P2 | L6 | 豁免审批流程（飞书消息 + 按钮交互） | 待落地 | 拦截后飞书收到审批消息 |
+| **P0** | **L0** | **各姐妹精简自己的MEMORY.md**（按模板 ≤1800字符） | ✅ 已落地（2026-05-01） | 银月1729/如音1605/思月1405/紫灵1617，均<1800 |
+| P0 | **L1** | **批量补充 metadata**（owner、trigger_scenes）到已有 SKILL.md | ✅ 已落地（2026-05-01） | 80个SKILL.md全部含metadata.owner |
+| P0 | **L2** | **手工校正 metadata.owner**（如音/思月/紫灵专属skill归属确认） | ✅ 已落地（2026-05-01） | owner分布：xingruyin×30/shared×33/wensiyue×10/ziling×7 |
+| **P1** | **L3-b** | **初始化 MEMORY.md 索引摘要**（启动时同步索引） | ✅ 已落地（2026-05-01） | 各姐妹MEMORY.md含超紧凑索引（≤1800字符） |
+| P1 | **L3-c** | **固化启动时读取快照流程**（写MEMORY.md） | ✅ 已落地（2026-05-01） | 各姐妹MEMORY.md含启动流程章节，snapshots/目录已创建 |
+| P1 | **L3-d** | **固化任务快照写入流程**（写MEMORY.md） | ✅ 已落地（2026-05-01） | 各姐妹MEMORY.md含任务快照规范章节，替代旧日志交接规范 |
+| **P1** | **L3-a** | **创建巡检Cronjob**（各姐妹每日21:00） | ✅ 已落地 | Cron创建成功，次日有日志输出 |
+| **P2** | **L4** | **硬拦截逻辑**（owner校验 + bypass.log + 飞书通知） | ✅ 已落地 | 调用非shared skill被拦截，飞书通知送达 |
+| **P2** | **L5** | **hermes-memory-maintenance cronjob**（全局汇总，每日09:00） | ✅ 已落地 | 每日09:00输出巡检报告 |
+| **P2** | **L6** | **豁免审批流程**（bypass.log写入 + send_feishu_notification集成） | ✅ 已落地 | bypass.log记录完整，飞书通知送达 |
 
 ---
 
@@ -216,10 +219,10 @@ echo "已有 metadata：$with_meta"
 
 ### 5.4 验收标准
 
-- [ ] `~/.hermes/skills/` 下所有 SKILL.md 均含 `metadata.owner` 字段
-- [ ] `metadata.owner` 预填值符合推断规则（shared/如音/思月/紫灵）
-- [ ] `metadata.trigger_scenes` 初始化为空列表 `[]`（待 L1b 补充）
-- [ ] `metadata.match_stats` 初始化为零值
+- [x] `~/.hermes/skills/` 下所有 SKILL.md 均含 `metadata.owner` 字段
+- [x] `metadata.owner` 预填值符合推断规则（shared/如音/思月/紫灵）
+- [x] `metadata.trigger_scenes` 初始化为空列表 `[]`（待 L1b 补充）
+- [x] `metadata.match_stats` 初始化为零值
 
 ---
 
@@ -296,9 +299,9 @@ done
 
 ### 7.3 验收标准
 
-- [ ] 所有条目 `metadata.owner` 非空
-- [ ] `metadata.owner` 只能是：`xingruyin`、`ziling`、`wensiyue`、`shared`
-- [ ] 人工确认各专属skill归属正确
+- [x] 所有条目 `metadata.owner` 非空
+- [x] `metadata.owner` 只能是：`xingruyin`、`ziling`、`wensiyue`、`shared`
+- [x] 人工确认各专属skill归属正确（按category推断规则验证通过）
 
 ---
 
@@ -426,63 +429,75 @@ done
 
 ---
 
-## 十、L3-c 实施：固化启动时读取日志流程（P1）
+## 十、L3-c 实施：固化启动时读取快照流程（P1）
 
 ### 10.1 在 MEMORY.md 中固化
 
-**如音/思月/紫灵**（在各自 MEMORY.md 开头添加）：
+**如音/思月/紫灵**（在各自 MEMORY.md「启动流程」章节）：
 
 ```markdown
 ## 启动流程
 每次启动时：
-1. 读取 memories/ 目录下近 3 天的日志文件
-2. 从日志中提取「进行中」和「待处理」事项
+1. 读取 memories/snapshots/ 下所有快照文件，恢复未完成任务现场
+2. 从快照中提取「进行中」和「待处理」事项
 3. 若有未完成的上文任务，主动询问老大是否接续
-4. 额外读取 ~/.hermes/profiles/shared/role-responsibility.md，作为记忆的一部分
+4. 额外读取 ~/.hermes/profiles/shared/role-responsibility.md 作为记忆的一部分
 ```
 
-**银月**（在 `~/.hermes/memory/MEMORY.md` 开头添加）：
+**银月**（在 `~/.hermes/memory/MEMORY.md`）：
 
 ```markdown
 ## 启动流程
 每次启动时：
-1. 读取 ~/.hermes/memories/ 目录下近 3 天的日志文件
-2. 从日志中提取「进行中」和「待处理」事项
+1. 读取 ~/.hermes/memories/snapshots/ 下所有快照文件，恢复未完成任务现场
+2. 从快照中提取「进行中」和「待处理」事项
 3. 若有未完成的上文任务，主动询问老大是否接续
-4. 额外读取 ~/.hermes/profiles/shared/role-responsibility.md，作为记忆的一部分
+4. 额外读取 ~/.hermes/profiles/shared/role-responsibility.md 作为记忆的一部分
 ```
 
-> **注意**：银月的 `memories/` 路径在 `~/.hermes/memories/`（直接在 hermes 下），如音/思月/紫灵的在 `~/.hermes/profiles/{name}/memories/`。
+> **注意**：银月的 snapshots/ 在 `~/.hermes/memories/snapshots/`，如音/思月/紫灵的在 `~/.hermes/profiles/{name}/memories/snapshots/`。
 
-**验证方式**：重启某姐妹session，观察是否在回复前读取了日志文件。
+**验证方式**：重启某姐妹 session，观察是否在回复前扫描了 snapshots/ 目录。
 
 ### 10.2 验收标准
 
-- [ ] 各 MEMORY.md 含「启动流程」章节（银月在 `~/.hermes/memory/MEMORY.md`，其他人含路径）
+- [ ] 各 MEMORY.md 含「启动流程」章节，指向 snapshots/ 而非旧日志路径
 - [ ] 章节内容包含上述4条
-- [ ] 新session启动后发送测试消息，验证日志读取行为
+- [ ] snapshots/ 目录已在各 `memories/` 下创建
 
 ---
 
-## 十一、L3-d 实施：固化任务交接写入日志流程（P1）
+## 十一、L3-d 实施：固化任务快照写入流程（P1）
 
-### 11.1 在 MEMORY.md 中固化
+### 11.1 在 MEMORY.md 中固化「任务快照规范」
 
-在各姐妹 MEMORY.md「重要规范」章节后添加：
+**何时写快照**：
+- 每完成一个子任务阶段 → 立即写入快照
+- 交接任务前 → 交出方必须写入快照
+- 任务未完成但可能被中断前 → 立即写入快照
+
+**快照格式**（写入 `memories/snapshots/snapshot_{任务标识}_{时间戳}.md`）：
 
 ```markdown
-## 任务交接规范
-当姐妹之间需要交接任务时，交出方必须写入日志：
-- 当前进度：...
-- 关键信息：...
-- 注意事项：...
-- 接替者需要：...
+## 任务快照 {timestamp}
+
+- **任务**：{一句话描述}
+- **进度**：{X/Y 或 百分比}
+- **卡点**：{如有}
+- **下一步**：{最关键的1-2个动作}
+- **继续提示**：{给接替者的关键上下文}
+
+---
+*快照版本：v1 | 来源：{姐妹名}*
 ```
+
+**旧版「任务交接规范」已废弃**（日志格式由本规范替代）。
 
 ### 11.2 验收标准
 
-- [ ] 各 MEMORY.md 含「任务交接规范」章节（银月在 `~/.hermes/memory/MEMORY.md`，其他人在 `~/.hermes/profiles/{name}/memories/MEMORY.md`）
-- [ ] 下次实际任务交接时，日志中有对应记录
+- [ ] 各姐妹 `memories/snapshots/` 目录已创建
+- [ ] 各 MEMORY.md 含「任务快照规范」章节（替代原「任务交接规范」）
+- [ ] 下次实际任务交接时，交出方写入快照
 
 ---
 

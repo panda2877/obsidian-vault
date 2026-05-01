@@ -454,6 +454,8 @@ Hermes Skill 索引巡检报告
   - manifest 只注入标准字段（name、description、category、tags），metadata 按需读取
   - 无独立索引文件，巡检直接扫描文件系统
   - 手动干预直接编辑 SKILL.md，无需维护两份数据
+- ✅ **L1 实施完成（2026-05-01）**：80个 SKILL.md 全部补充 metadata（owner/trigger_scenes/match_stats）
+- ✅ **L2 实施完成（2026-05-01）**：owner 按 category 推断规则验证正确，分布为 xingruyin×30/shared×33/wensiyue×10/ziling×7
 - ✅ 启动时加载 shared 配置：各姐妹启动时额外读取 `~/.hermes/profiles/shared/role-responsibility.md`
 
 ---
