@@ -1,0 +1,575 @@
+diff --git a/agent/prompt_builder.py b/agent/prompt_builder.py
+index 5750cf2..592a928 100644
+--- a/agent/prompt_builder.py
++++ b/agent/prompt_builder.py
+@@ -961,31 +961,54 @@ def _truncate_content(content: str, filename: str, max_chars: int = CONTEXT_FILE
+ 
+ 
+ def load_soul_md() -> Optional[str]:
+-    """Load SOUL.md from HERMES_HOME and return its content, or None.
++    """Load agent identity from SOUL.md.
++
++    Priority:
++    1. ``<HERMES_HOME>/SOUL.md`` — profile-specific soul (profile mode)
++    2. ``~/.hermes/SOUL.md`` — global default soul
+ 
+     Used as the agent identity (slot #1 in the system prompt).  When this
+     returns content, ``build_context_files_prompt`` should be called with
+     ``skip_soul=True`` so SOUL.md isn't injected twice.
+     """
++    import os as _os
++
++    # Try HERMES_HOME/SOUL.md first (profile mode)
+     try:
+         from hermes_cli.config import ensure_hermes_home
+         ensure_hermes_home()
+     except Exception as e:
+         logger.debug("Could not ensure HERMES_HOME before loading SOUL.md: %s", e)
+ 
+-    soul_path = get_hermes_home() / "SOUL.md"
+-    if not soul_path.exists():
+-        return None
+-    try:
+-        content = soul_path.read_text(encoding="utf-8").strip()
+-        if not content:
+-            return None
+-        content = _scan_context_content(content, "SOUL.md")
+-        content = _truncate_content(content, "SOUL.md")
+-        return content
+-    except Exception as e:
+-        logger.debug("Could not read SOUL.md from %s: %s", soul_path, e)
+-        return None
++    soul_home = get_hermes_home()
++    soul_path = soul_home / "SOUL.md"
++    if soul_path.exists():
++        try:
++            content = soul_path.read_text(encoding="utf-8").strip()
++            if content:
++                logger.debug("Loaded SOUL.md from %s", soul_path)
++                content = _scan_context_content(content, "SOUL.md")
++                content = _truncate_content(content, "SOUL.md")
++                return content
++        except Exception as e:
++            logger.debug("Could not read SOUL.md from %s: %s", soul_path, e)
++
++    # Fallback to global ~/.hermes/SOUL.md
++    global_home = _os.path.expanduser("~/.hermes")
++    if global_home != str(soul_home):
++        global_soul = Path(global_home) / "SOUL.md"
++        if global_soul.exists():
++            try:
++                content = global_soul.read_text(encoding="utf-8").strip()
++                if content:
++                    logger.debug("Loaded SOUL.md from global %s", global_soul)
++                    content = _scan_context_content(content, "SOUL.md")
++                    content = _truncate_content(content, "SOUL.md")
++                    return content
++            except Exception as e:
++                logger.debug("Could not read global SOUL.md from %s: %s", global_soul, e)
++
++    return None
+ 
+ 
+ def _load_hermes_md(cwd_path: Path) -> str:
+diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
+index 7efb756..af65360 100644
+--- a/gateway/platforms/api_server.py
++++ b/gateway/platforms/api_server.py
+@@ -549,6 +549,84 @@ class APIServerAdapter(BasePlatformAdapter):
+         # Creation timestamps for orphaned-run TTL sweep
+         self._run_streams_created: Dict[str, float] = {}
+         self._session_db: Optional[Any] = None  # Lazy-init SessionDB for session continuity
++        self._session_store: Any = None  # Wired via set_session_store()
++
++    # ── Session store (wired by gateway) ─────────────────────────────────
++
++    def set_session_store(self, session_store: Any) -> None:
++        self._session_store = session_store
++
++    # ── Session API handlers ──────────────────────────────────────────────
++
++    async def _handle_list_sessions(self, request: "web.Request") -> "web.Response":
++        """GET /api/sessions — list all gateway sessions."""
++        auth_err = self._check_auth(request)
++        if auth_err:
++            return auth_err
++        if not self._session_store:
++            return web.json_response({"error": "Session store unavailable"}, status=503)
++        try:
++            limit = int(request.query.get("limit", 50))
++            offset = int(request.query.get("offset", 0))
++        except ValueError:
++            return web.json_response({"error": "invalid limit/offset"}, status=400)
++
++        entries = self._session_store.list_sessions()
++        entries.sort(key=lambda e: e.updated_at, reverse=True)
++        total = len(entries)
++        page = list(entries)[offset : offset + limit]
++
++        def _entry_to_dict(e):
++            return {
++                "key": e.session_key,
++                "id": e.session_id,
++                "title": e.display_name or e.session_key,
++                "platform": e.platform.value if e.platform else None,
++                "chat_type": e.chat_type,
++                "created_at": e.created_at.isoformat() if e.created_at else None,
++                "updated_at": e.updated_at.isoformat() if e.updated_at else None,
++                "input_tokens": e.input_tokens,
++                "output_tokens": e.output_tokens,
++                "total_tokens": e.total_tokens,
++                "origin": e.origin.to_dict() if e.origin else None,
++            }
++
++        return web.json_response({
++            "items": [_entry_to_dict(e) for e in page],
++            "total": total,
++            "limit": limit,
++            "offset": offset,
++        })
++
++    async def _handle_get_session(self, request: "web.Request") -> "web.Response":
++        """GET /api/sessions/{session_key} — get a single gateway session entry."""
++        auth_err = self._check_auth(request)
++        if auth_err:
++            return auth_err
++        if not self._session_store:
++            return web.json_response({"error": "Session store unavailable"}, status=503)
++        session_key = request.match_info.get("session_key", "")
++        self._session_store._ensure_loaded()
++        entry = self._session_store._entries.get(session_key)
++        if not entry:
++            return web.json_response({"error": "Session not found"}, status=404)
++
++        def _entry_to_dict(e):
++            return {
++                "key": e.session_key,
++                "id": e.session_id,
++                "title": e.display_name or e.session_key,
++                "platform": e.platform.value if e.platform else None,
++                "chat_type": e.chat_type,
++                "created_at": e.created_at.isoformat() if e.created_at else None,
++                "updated_at": e.updated_at.isoformat() if e.updated_at else None,
++                "input_tokens": e.input_tokens,
++                "output_tokens": e.output_tokens,
++                "total_tokens": e.total_tokens,
++                "origin": e.origin.to_dict() if e.origin else None,
++            }
++
++        return web.json_response({"session": _entry_to_dict(entry)})
+ 
+     @staticmethod
+     def _parse_cors_origins(value: Any) -> tuple[str, ...]:
+@@ -2497,6 +2575,9 @@ class APIServerAdapter(BasePlatformAdapter):
+             self._app.router.add_post("/api/jobs/{job_id}/pause", self._handle_pause_job)
+             self._app.router.add_post("/api/jobs/{job_id}/resume", self._handle_resume_job)
+             self._app.router.add_post("/api/jobs/{job_id}/run", self._handle_run_job)
++            # Session store API
++            self._app.router.add_get("/api/sessions", self._handle_list_sessions)
++            self._app.router.add_get("/api/sessions/{session_key}", self._handle_get_session)
+             # Structured event streaming
+             self._app.router.add_post("/v1/runs", self._handle_runs)
+             self._app.router.add_get("/v1/runs/{run_id}/events", self._handle_run_events)
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index bda137c..a7ab1ed 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -1350,16 +1350,21 @@ class BasePlatformAdapter(ABC):
+         
+         # Extract MEDIA:<path> tags, allowing optional whitespace after the colon
+         # and quoted/backticked paths for LLM-formatted outputs.
++        # Only matches absolute paths (/...) or tilde paths (~/...) to avoid
++        # matching arbitrary text like URLs or random words.
+         media_pattern = re.compile(
+-            r'''[`"']?MEDIA:\s*(?P<path>`[^`\n]+`|"[^"\n]+"|'[^'\n]+'|(?:~/|/)\S+(?:[^\S\n]+\S+)*?\.(?:png|jpe?g|gif|webp|mp4|mov|avi|mkv|webm|ogg|opus|mp3|wav|m4a)(?=[\s`"',;:)\]}]|$)|\S+)[`"']?'''
++            r'''[`"']?MEDIA:\s*(?P<path>`[^`\n]+`|"[^"\n]+"|'[^'\n]+'|(?:~?/)(?:[^\s`"',;:)\]}]+))[`"']?'''
+         )
+         for match in media_pattern.finditer(content):
+             path = match.group("path").strip()
+             if len(path) >= 2 and path[0] == path[-1] and path[0] in "`\"'":
+                 path = path[1:-1].strip()
+             path = path.lstrip("`\"'").rstrip("`\"',.;:)}]")
+-            if path:
+-                media.append((os.path.expanduser(path), has_voice_tag))
++            # Only accept paths starting with / (absolute) or ~/ (tilde)
++            if path and (path.startswith("/") or path.startswith("~/") or path.startswith("~")):
++                expanded = os.path.expanduser(path)
++                if os.path.isfile(expanded):
++                    media.append((expanded, has_voice_tag))
+ 
+         # Remove MEDIA tags from content (including surrounding quote/backtick wrappers)
+         if media:
+diff --git a/gateway/platforms/weixin.py b/gateway/platforms/weixin.py
+index 958e71d..454f2cb 100644
+--- a/gateway/platforms/weixin.py
++++ b/gateway/platforms/weixin.py
+@@ -362,12 +362,20 @@ async def _api_post(
+ ) -> Dict[str, Any]:
+     body = _json_dumps({**payload, "base_info": _base_info()})
+     url = f"{base_url.rstrip('/')}/{endpoint}"
+-    timeout = aiohttp.ClientTimeout(total=timeout_ms / 1000)
+-    async with session.post(url, data=body, headers=_headers(token, body), timeout=timeout) as response:
+-        raw = await response.text()
+-        if not response.ok:
+-            raise RuntimeError(f"iLink POST {endpoint} HTTP {response.status}: {raw[:200]}")
+-        return json.loads(raw)
++    # Use aiohttp.ClientTimeout (passed to the request) instead of
++    # asyncio.timeout(), because asyncio.timeout() fails with
++    # "Timeout context manager should be used inside a task" when the
++    # session is used across threads/event loops (aiohttp 3.13+).
++    timeout_seconds = timeout_ms / 1000
++    client_timeout = aiohttp.ClientTimeout(total=timeout_seconds)
++    try:
++        async with session.post(url, data=body, headers=_headers(token, body), timeout=client_timeout) as response:
++            raw = await response.text()
++            if not response.ok:
++                raise RuntimeError(f"iLink POST {endpoint} HTTP {response.status}: {raw[:200]}")
++            return json.loads(raw)
++    except asyncio.TimeoutError:
++        raise asyncio.TimeoutError(f"iLink POST {endpoint} timed out after {timeout_ms}ms")
+ 
+ 
+ async def _api_get(
+@@ -382,12 +390,16 @@ async def _api_get(
+         "iLink-App-Id": ILINK_APP_ID,
+         "iLink-App-ClientVersion": str(ILINK_APP_CLIENT_VERSION),
+     }
+-    timeout = aiohttp.ClientTimeout(total=timeout_ms / 1000)
+-    async with session.get(url, headers=headers, timeout=timeout) as response:
+-        raw = await response.text()
+-        if not response.ok:
+-            raise RuntimeError(f"iLink GET {endpoint} HTTP {response.status}: {raw[:200]}")
+-        return json.loads(raw)
++    timeout_seconds = timeout_ms / 1000
++    client_timeout = aiohttp.ClientTimeout(total=timeout_seconds)
++    try:
++        async with session.get(url, headers=headers, timeout=client_timeout) as response:
++            raw = await response.text()
++            if not response.ok:
++                raise RuntimeError(f"iLink GET {endpoint} HTTP {response.status}: {raw[:200]}")
++            return json.loads(raw)
++    except asyncio.TimeoutError:
++        raise asyncio.TimeoutError(f"iLink GET {endpoint} timed out after {timeout_ms}ms")
+ 
+ 
+ async def _get_updates(
+@@ -535,17 +547,25 @@ async def _upload_ciphertext(
+     Accepts either a constructed CDN URL (from upload_param) or a direct
+     upload_full_url — both use POST with the raw ciphertext as the body.
+     """
+-    timeout = aiohttp.ClientTimeout(total=120)
+-    async with session.post(upload_url, data=ciphertext, headers={"Content-Type": "application/octet-stream"}, timeout=timeout) as response:
+-        if response.status == 200:
+-            encrypted_param = response.headers.get("x-encrypted-param")
+-            if encrypted_param:
+-                await response.read()
+-                return encrypted_param
+-            raw = await response.text()
+-            raise RuntimeError(f"CDN upload missing x-encrypted-param header: {raw[:200]}")
+-        raw = await response.text()
+-        raise RuntimeError(f"CDN upload HTTP {response.status}: {raw[:200]}")
++    client_timeout = aiohttp.ClientTimeout(total=120)
++    try:
++        async with session.post(
++            upload_url,
++            data=ciphertext,
++            headers={"Content-Type": "application/octet-stream"},
++            timeout=client_timeout,
++        ) as response:
++                if response.status == 200:
++                    encrypted_param = response.headers.get("x-encrypted-param")
++                    if encrypted_param:
++                        await response.read()
++                        return encrypted_param
++                    raw = await response.text()
++                    raise RuntimeError(f"CDN upload missing x-encrypted-param header: {raw[:200]}")
++                raw = await response.text()
++                raise RuntimeError(f"CDN upload HTTP {response.status}: {raw[:200]}")
++    except asyncio.TimeoutError:
++        raise asyncio.TimeoutError(f"CDN upload timed out after 120s for {upload_url}")
+ 
+ 
+ async def _download_bytes(
+@@ -554,10 +574,13 @@ async def _download_bytes(
+     url: str,
+     timeout_seconds: float = 60.0,
+ ) -> bytes:
+-    timeout = aiohttp.ClientTimeout(total=timeout_seconds)
+-    async with session.get(url, timeout=timeout) as response:
+-        response.raise_for_status()
+-        return await response.read()
++    client_timeout = aiohttp.ClientTimeout(total=timeout_seconds)
++    try:
++        async with session.get(url, timeout=client_timeout) as response:
++            response.raise_for_status()
++            return await response.read()
++    except asyncio.TimeoutError:
++        raise asyncio.TimeoutError(f"Download from {url} timed out after {timeout_seconds}s")
+ 
+ 
+ _WEIXIN_CDN_ALLOWLIST: frozenset[str] = frozenset(
+@@ -1769,13 +1792,17 @@ class WeixinAdapter(BasePlatformAdapter):
+             raise ValueError(f"Blocked unsafe URL (SSRF protection): {url}")
+ 
+         assert self._send_session is not None
+-        async with self._send_session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
+-            response.raise_for_status()
+-            data = await response.read()
+-            suffix = Path(url.split("?", 1)[0]).suffix or ".bin"
+-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
+-            handle.write(data)
+-            return handle.name
++        client_timeout = aiohttp.ClientTimeout(total=30)
++        try:
++            async with self._send_session.get(url, timeout=client_timeout) as response:
++                response.raise_for_status()
++                data = await response.read()
++                suffix = Path(url.split("?", 1)[0]).suffix or ".bin"
++            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
++                handle.write(data)
++                return handle.name
++        except asyncio.TimeoutError:
++            raise asyncio.TimeoutError(f"Remote media download from {url} timed out after 30s")
+ 
+     async def _send_file(
+         self,
+@@ -1980,33 +2007,14 @@ async def send_weixin_direct(
+     token_store.restore(account_id)
+     context_token = token_store.get(account_id, chat_id)
+ 
+-    live_adapter = _LIVE_ADAPTERS.get(resolved_token)
+-    send_session = getattr(live_adapter, '_send_session', None)
+-    if live_adapter is not None and send_session is not None and not send_session.closed:
+-        last_result: Optional[SendResult] = None
+-        cleaned = live_adapter.format_message(message)
+-        if cleaned:
+-            last_result = await live_adapter.send(chat_id, cleaned)
+-            if not last_result.success:
+-                return {"error": f"Weixin send failed: {last_result.error}"}
+-
+-        for media_path, _is_voice in media_files or []:
+-            ext = Path(media_path).suffix.lower()
+-            if ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}:
+-                last_result = await live_adapter.send_image_file(chat_id, media_path)
+-            else:
+-                last_result = await live_adapter.send_document(chat_id, media_path)
+-            if not last_result.success:
+-                return {"error": f"Weixin media send failed: {last_result.error}"}
+-
+-        return {
+-            "success": True,
+-            "platform": "weixin",
+-            "chat_id": chat_id,
+-            "message_id": last_result.message_id if last_result else None,
+-            "context_token_used": bool(context_token),
+-        }
+-
++    # Always create our own aiohttp.ClientSession here rather than
++    # reusing live_adapter._send_session.  The live adapter's session
++    # was created in the gateway's event loop; when this function runs
++    # (via send_message tool -> _run_async) it executes in a different
++    # event loop/thread, so sharing the session would cause:
++    #   "Timeout context manager should be used inside a task"
++    #   "Future attached to a different loop"
++    # errors with aiohttp 3.13+.
+     async with aiohttp.ClientSession(trust_env=True, connector=_make_ssl_connector()) as session:
+         adapter = WeixinAdapter(
+             PlatformConfig(
+diff --git a/gateway/run.py b/gateway/run.py
+index f9b7cde..ebac66e 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -7074,43 +7074,42 @@ class GatewayRunner:
+         name = event.get_command_args().strip()
+ 
+         if not name:
+-            # List recent titled sessions for this user/platform
++            # No name given — default to "session-wechat", fall back to most recent
+             try:
+-                user_source = source.platform.value if source.platform else None
+-                sessions = self._session_db.list_sessions_rich(
+-                    source=user_source, limit=10
+-                )
+-                titled = [s for s in sessions if s.get("title")]
+-                if not titled:
+-                    return (
+-                        "No named sessions found.\n"
+-                        "Use `/title My Session` to name your current session, "
+-                        "then `/resume My Session` to return to it later."
++                target_id = self._session_db.resolve_session_by_title("session-wechat")
++                if target_id:
++                    target_title = "session-wechat"
++                else:
++                    # Fall back to most recent session
++                    user_source = source.platform.value if source.platform else None
++                    sessions = self._session_db.list_sessions_rich(
++                        source=user_source, limit=10
+                     )
+-                lines = ["📋 **Named Sessions**\n"]
+-                for s in titled[:10]:
+-                    title = s["title"]
+-                    preview = s.get("preview", "")[:40]
+-                    preview_part = f" — _{preview}_" if preview else ""
+-                    lines.append(f"• **{title}**{preview_part}")
+-                lines.append("\nUsage: `/resume <session name>`")
+-                return "\n".join(lines)
++                    if sessions:
++                        target_id = sessions[0].get("id")
++                        target_title = sessions[0].get("title") or sessions[0].get("preview", "recent session")[:40]
++                    else:
++                        return (
++                            "No previous sessions found.\n"
++                            "Start a new conversation — I'll remember it for next time."
++                        )
+             except Exception as e:
+-                logger.debug("Failed to list titled sessions: %s", e)
++                logger.debug("Failed to list sessions for resume: %s", e)
+                 return f"Could not list sessions: {e}"
+-
+-        # Resolve the name to a session ID
+-        target_id = self._session_db.resolve_session_by_title(name)
+-        if not target_id:
+-            return (
+-                f"No session found matching '**{name}**'.\n"
+-                "Use `/resume` with no arguments to see available sessions."
+-            )
++        else:
++            # Resolve the name to a session ID
++            target_id = self._session_db.resolve_session_by_title(name)
++            if not target_id:
++                return (
++                    f"No session found matching '**{name}**'.\n"
++                    "Use `/resume` with no arguments to see available sessions."
++                )
++            target_title = name
+ 
+         # Check if already on that session
+         current_entry = self.session_store.get_or_create_session(source)
+         if current_entry.session_id == target_id:
+-            return f"📌 Already on session **{name}**."
++            return f"📌 Already on session **{target_title}**."
+ 
+         # Flush memories for current session before switching
+         try:
+@@ -7138,7 +7137,7 @@ class GatewayRunner:
+         msg_count = len([m for m in history if m.get("role") == "user"]) if history else 0
+         msg_part = f" ({msg_count} message{'s' if msg_count != 1 else ''})" if msg_count else ""
+ 
+-        return f"↻ Resumed session **{title}**{msg_part}. Conversation restored."
++        return f"↻ Resumed session **{target_title}**{msg_part}. Conversation restored."
+ 
+     async def _handle_branch_command(self, event: MessageEvent) -> str:
+         """Handle /branch [name] — fork the current session into a new independent copy.
+diff --git a/tools/send_message_tool.py b/tools/send_message_tool.py
+index d36cfbf..d1c9145 100644
+--- a/tools/send_message_tool.py
++++ b/tools/send_message_tool.py
+@@ -1550,6 +1550,45 @@ async def _send_yuanbao(chat_id, message, media_files=None):
+         return _error(f"Yuanbao send failed: {e}")
+ 
+ 
++# ============================================================================
++# Convenience helpers for internal use (bypass.log notifications, etc.)
++# ============================================================================
++
++def send_feishu_notification(message: str, chat_id: str | None = None) -> dict:
++    """Send a plain text Feishu notification from any thread (sync wrapper).
++
++    Used by skills_tool.py to notify the Feishu group when a sub-agent's
++    skill is blocked (L4 bypass.log write), and by other internal callers.
++
++    Args:
++        message: Plain text message to send.
++        chat_id: Target Feishu chat_id.  Defaults to the 潘钰文和他的小妞们 group.
++
++    Returns:
++        {"success": True, ...} or {"error": "..."}
++    """
++    # Default to the 潘钰文和他的小妞们 group (银月家的主群)
++    _DEFAULT_FEISHU_GROUP = "oc_08a798e06860c6b905f8090aec40208b"
++    if chat_id is None:
++        chat_id = _DEFAULT_FEISHU_GROUP
++
++    if not chat_id:
++        return {"error": "No Feishu chat_id configured for notifications"}
++
++    # Call _handle_send directly to avoid circular-import issues with registry
++    try:
++        result = _handle_send({
++            "target": f"feishu:{chat_id}",
++            "message": message,
++        })
++        if isinstance(result, str):
++            import json as _json
++            return _json.loads(result)
++        return result
++    except Exception as e:
++        return {"error": str(e)}
++
++
+ # --- Registry ---
+ from tools.registry import registry, tool_error
+ 
+diff --git a/tools/skills_tool.py b/tools/skills_tool.py
+index ed8c8cf..37af484 100644
+--- a/tools/skills_tool.py
++++ b/tools/skills_tool.py
+@@ -1009,6 +1009,58 @@ def skill_view(name: str, file_path: str = None, task_id: str = None) -> str:
+                 ensure_ascii=False,
+             )
+ 
++        # ── Owner-based access control (L4 hard拦截) ──────────────────────────
++        # Read skills-index.json to check skill owner
++        _index_path = Path.home() / ".hermes" / "skills-index" / "skills-index.json"
++        if _index_path.exists():
++            try:
++                import json as _json
++                with open(_index_path, "r", encoding="utf-8") as _f:
++                    _index_data = _json.load(_f)
++                # Find the skill in index (match by path)
++                _skill_path = f"{skill_md.parent.parent.name}/{skill_md.parent.name}" if skill_md.parent.parent.name != ".hermes" else skill_md.parent.name
++                for _skill_entry in _index_data.get("skills", []):
++                    if _skill_entry.get("path") == _skill_path or _skill_entry.get("name") == resolved_name:
++                        _owner = _skill_entry.get("owner", "shared")
++                        if _owner != "shared":
++                            # Skill belongs to a sub-agent - log to bypass.log
++                            from datetime import datetime
++                            _owner_name_map = {"xingruyin": "如音", "wensiyue": "思月", "ziling": "紫灵"}
++                            _owner_display = _owner_name_map.get(_owner, _owner)
++                            _log_line = f"[{datetime.now().isoformat()}] BLOCKED skill={resolved_name} owner={_owner}\n"
++                            try:
++                                _bypass_log = Path.home() / ".hermes" / "logs" / "bypass.log"
++                                with open(_bypass_log, "a", encoding="utf-8") as _logf:
++                                    _logf.write(_log_line)
++                            except Exception:
++                                pass
++                            
++                            # Try to send feishu notification
++                            try:
++                                from tools.send_message_tool import send_feishu_notification
++                                _msg = f"⚠️ Skill调用拦截\n\n银月尝试调用 [{resolved_name}]\n归属：{_owner_display}专属\n不允许直接调用\n\n请通过 delegate_task 委托 {_owner_display} 执行"
++                                send_feishu_notification(_msg)
++                            except Exception:
++                                pass
++                            
++                            return json.dumps(
++                                {
++                                    "success": False,
++                                    "error": (
++                                        f"❌ Skill [{resolved_name}] 归属：{_owner_display}专属\n"
++                                        f"不允许直接调用。\n\n"
++                                        f"请通过 delegate_task 委托 {_owner_display} 执行，"
++                                        f"或联系 {_owner_display} 将此skill设为shared。"
++                                    ),
++                                    "owner": _owner,
++                                    "blocked": True,
++                                },
++                                ensure_ascii=False,
++                            )
++                        break
++            except Exception:
++                pass  # If index read fails, allow the call
++
+         # If a specific file path is requested, read that instead
+         if file_path and skill_dir:
+             from tools.path_security import validate_within_dir, has_traversal_component
