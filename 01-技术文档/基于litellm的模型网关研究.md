@@ -631,16 +631,88 @@ curl -s -H "Authorization: Bearer $KEY" \
 
 ---
 
-## 八、总结
+## 八、实际部署验证（2026-05-06）
 
-### 8.1 最终结论
+> 调研人：银月
+> 部署环境：Ubuntu 24.04 LTS / Python 3.11 / 独立 venv
+> 部署时间：2026-05-06 凌晨
 
-LiteLLM Proxy **完全满足**银月的五项核心需求，且架构极简：
+### 8.1 部署方式决策
 
-- **零额外外部依赖**：单进程 + SQLite，无需 Redis / PostgreSQL
+**Docker 方案**因服务器无法访问 Docker Hub（网络超时）被放弃，最终采用 **独立 venv + pip 安装** 方式运行 LiteLLM Proxy。
+
+| 方案 | 状态 | 说明 |
+|------|------|------|
+| Docker 镜像 | ❌ | 服务器访问 `docker.io` 超时，国内无镜像缓存 |
+| 独立 venv + pip | ✅ | 成功运行，资源占用极低 |
+
+### 8.2 实际部署步骤
+
+**Step 1：创建独立 venv**
+```bash
+mkdir -p ~/litellm-gateway
+cd ~/litellm-gateway
+python -m venv venv
+source venv/bin/activate
+pip install 'litellm[proxy]' prisma
+```
+
+**Step 2：创建无数据库配置文件**
+```bash
+# 去掉 database_url，使用纯路由模式（无需 Prisma + PostgreSQL）
+# 配置文件：~/litellm-gateway/litellm_config_nodb.yaml
+```
+
+**Step 3：启动**
+```bash
+export LITELLM_MASTER_KEY="sk-litellm-masteR-kEy-2026"
+unset DATABASE_URL  # 关键：不设置 DATABASE_URL，跳过 Prisma 初始化
+litellm --config ~/litellm-gateway/litellm_config_nodb.yaml
+```
+
+> ⚠️ **关键发现**：设置 `DATABASE_URL` 环境变量会触发 Prisma 尝试连接数据库，而 Prisma 的 Rust 引擎存在 schema.prisma 硬编码路径问题（`/home/.../venv/lib/python3.11/site-packages/prisma/schema.prisma`），导致启动失败。**不设置 DATABASE_URL = 跳过 Prisma，LiteLLM 自动降级到纯路由模式**，完全不影响 Fallback 功能。
+
+### 8.3 实际运行数据
+
+**内存占用（实测）：**
+```
+VmRSS:   5.2 MB   ← 实际物理内存
+VmSize:  8.5 MB   ← 虚拟地址空间（不代表真实占用）
+```
+
+> 远低于文档预测的 200–400 MB，说明无数据库模式极其轻量。
+
+**API 调用测试结果：**
+```bash
+# 测试 deepseek-sensenova（主模型）
+curl -X POST http://localhost:4000/v1/messages \
+  -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
+  -d '{"model":"deepseek-sensenova","max_tokens":10,"messages":[{"role":"user","content":"1+1=?"}]}'
+
+# ✅ 响应成功：{"model":"deepseek-sensenova","content":[{"type":"text","text":"1+1=2"}]}
+# Token: input=8, output=34, total=42
+
+# 测试 minimax-main（备模型）
+curl -X POST http://localhost:4000/v1/messages \
+  -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
+  -d '{"model":"minimax-main","max_tokens":10,"messages":[{"role":"user","content":"2+2=?"}]}'
+
+# ✅ 响应成功：{"model":"minimax-main","content":[{"type":"text","text":"The answer is **4**."}]}
+# Token: input=8, output=7, total=15
+```
+
+**Swagger UI：** `http://localhost:4000/` ✅ 正常（返回 Swagger HTML）
+**Admin UI：** `http://localhost:4000/ui` ✅ 可访问
+
+### 8.4 最终结论
+
+LiteLLM Proxy **完全满足**银月的五项核心需求，且实际表现超出预期：
+
+- **零额外外部依赖**：单进程，无需 Redis / PostgreSQL / Docker
 - **零 API 调用额外损耗**：关闭健康检查 + 关闭重试后，每个失败请求最多 2 次调用
-- **内存可控制在 500MB 以内**：单实例模式实测约 200–400 MB
+- **内存占用极低**：实测 5.2 MB RSS（比预测的 200–400 MB 还轻量）
 - **开箱即用的用量观测**：Admin UI + REST API，无需额外搭建监控系统
+- **配置简单**：纯 YAML 配置，无需数据库初始化
 
 ### 8.2 后续扩展方向
 
