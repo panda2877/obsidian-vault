@@ -22,13 +22,37 @@ Obsidian vault
 **重要原则**：
 - 进度聚合数字（多少 done，多少 backlog）→ 查 SQLite
 - 任务详情（目标、checkpoints、阻塞原因）→ 读 Obsidian .md 文件
-- 二者通过 `kanban-sync` 脚本同步
+- 二者通过 `kanban-sync` skill 中的脚本同步
 
 ---
 
 ## 二、新建看板
 
-### 2.1 整体看板总览文档模板
+### 2.1 判断是否需要建看板任务
+
+参见 `kanban-orchestrator` skill — **判断是否建看板 vs 直接执行**。
+
+适合建看板任务的场景（满足任一）：
+1. 需要多角色协作（研究 + 分析 + 写作 = 多个 profile）
+2. 工作需要跨越 crash/restart 持久化
+3. 需要人工介入环节
+4. 可并行执行的子任务
+5. 需要 review/迭代
+6. 审计追踪重要
+
+不满足以上 → 用 `delegate_task` 或直接执行。
+
+### 2.2 任务分解与创建
+
+参见 `kanban-orchestrator` skill — **Decomposition Playbook**。
+
+标准流程：
+1. 画任务图（T1 → T2 → T3），确认依赖关系
+2. 用 `kanban_create()` 创建所有任务，指定 `parents=[]` 或 `parents=[t1, t2]`
+3. 用 `kanban_complete(summary=..., metadata=...)` 标记自己完成
+4. 上报给用户
+
+### 2.3 整体看板总览文档模板
 
 路径：`.kanban/{project-name}-看板总览.md`
 
@@ -93,7 +117,7 @@ Obsidian vault
 - [[看板Agent使用指南]]（本文档）
 ```
 
-### 2.2 任务卡片模板
+### 2.4 任务卡片模板
 
 路径：`templates/task-template.md`（放在项目 templates/ 目录下）
 
@@ -124,50 +148,14 @@ updated: {{UPDATED_AT}}     # ISO 8601
 {{NOTES}}
 ```
 
-### 2.3 新建任务的标准流程
+### 2.5 新建任务到 SQLite
 
-**Step 1：在 Obsidian 创建任务文件**
+参见 `kanban-worker` skill — **State Reconciliation: Obsidian vs SQLite**。
 
-```bash
-# 路径格式：{project}/backlog/TSK-{date}-{seq}.md
-# seq 从 001 开始，按日期分组
-
-TARGET_DIR="/home/agentuser/obsidian-vault/00-项目管理/{project}/backlog"
-TASK_FILE="${TARGET_DIR}/TSK-$(date +%Y%m%d)-$(printf '%03d' $SEQ).md"
-```
-
-**Step 2：写入 frontmatter + 初始内容**
-
-```markdown
----
-id: TSK-20260505-001
-title: {任务标题}
-status: inbox
-priority: P1
-assignee: xingruyin
-mission_id: {mission-id}
-created: 2026-05-05T10:00:00+08:00
-updated: 2026-05-05T10:00:00+08:00
----
-
-## 任务目标
-
-{具体目标描述}
-
-## 检查点历史
-
-（空，待 agent 运行时追加）
-
----
-
-## 笔记
-
-（待补充）
-```
-
-**Step 3：在 SQLite 中注册任务**
+**注意**：优先使用 `kanban_create()` tool/script 建任务，SQLite INSERT 仅在 tool 不可用时兜底。
 
 ```python
+# 兜底方案（tool 不可用时）
 import sqlite3
 from datetime import datetime, timezone
 
@@ -177,12 +165,12 @@ cur.execute("""
     INSERT INTO tasks (id, title, body, assignee, status, priority, created_by, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 """, (
-    'TSK-20260505-001',
+    'TSK-YYYYMMDD-NNN',
     '任务标题',
     '任务目标内容',
-    'xingruyin',
-    'backlog',       # inbox → backlog（Obsidian目录未开始=backlog）
-    1,               # P1=1, P2=2, P3=3
+    'xingruyin',   # profile 名，不是 agent_id
+    'backlog',
+    1,              # P1=1
     'xingruyin',
     int(datetime.now(timezone.utc).timestamp())
 ))
@@ -190,16 +178,7 @@ conn.commit()
 conn.close()
 ```
 
-**Step 4：Git 提交**
-
-```bash
-cd /home/agentuser/obsidian-vault
-git add "00-项目管理/{project}/backlog/TSK-20260505-001.md"
-git commit -m "feat(kanban): 新建任务 TSK-20260505-001"
-git push
-```
-
-### 2.4 链接要求
+### 2.6 链接规范
 
 | 链接类型 | 格式 | 示例 |
 |---------|------|------|
@@ -207,20 +186,35 @@ git push
 | 主文档链接任务卡片 | `[[backlog/TSK-20260504-001\|[P0] 任务标题]]` | 看板总览链接到任务 |
 | 跨文档交叉引用 | `[[看板开发任务#P0 — 核心闭环]]` | 方案文档引用看板章节 |
 
+### 2.7 Git 提交
+
+```bash
+cd /home/agentuser/obsidian-vault
+git add "00-项目管理/{project}/backlog/TSK-YYYYMMDD-NNN.md"
+git commit -m "feat(kanban): 新建任务 TSK-YYYYMMDD-NNN"
+git push
+```
+
 ---
 
 ## 三、查询待办
 
-**原则：进度统计以 SQLite 为准**
+**使用 `kanban-todo` skill。**
 
-### 3.1 查全局进度（SQLite）
+加载 skill 后有两种方式：
+
+```bash
+# 方式一：直接执行脚本（推荐）
+python3 /home/agentuser/.hermes/skills/kanban-todo/scripts/kanban_todo.py
+```
 
 ```python
+# 方式二：直接写 Python 查询
 import sqlite3
 conn = sqlite3.connect('/home/agentuser/.hermes/kanban.db')
 cur = conn.cursor()
 
-# 按状态统计
+# 按状态统计（权威数字）
 cur.execute("""
     SELECT status, COUNT(*) as cnt
     FROM tasks
@@ -230,53 +224,22 @@ cur.execute("""
 for row in cur.fetchall():
     print(f"{row[0]}: {row[1]}")
 
-# 按优先级统计 backlog
-cur.execute("""
-    SELECT priority, COUNT(*) as cnt
-    FROM tasks
-    WHERE status = 'backlog' AND id LIKE 'TSK-%'
-    GROUP BY priority
-    ORDER BY priority
-""")
-print("\nBacklog by priority:")
-for row in cur.fetchall():
-    print(f"  P{row[0]}: {row[1]}")
-
 conn.close()
 ```
 
-### 3.2 查某个任务的基本信息（SQLite）
-
-```python
-cur.execute("""
-    SELECT t.id, t.title, t.status, t.assignee, t.priority,
-           c.phase, c.summary, c.blockers, c.next_steps
-    FROM tasks t
-    LEFT JOIN checkpoints c ON t.id = c.task_id
-    WHERE t.id = ?
-""", ('TSK-20260505-001',))
-row = cur.fetchone()
-```
-
-### 3.3 查所有 backlog 任务（文件优先，SQLite 计数）
-
-```bash
-# 文件系统：列出所有 backlog 任务
-find /home/agentuser/obsidian-vault -path "*/backlog/TSK-*.md" | sort
-
-# SQLite：快速计数（权威数字）
-sqlite3 ~/.hermes/kanban.db "SELECT COUNT(*) FROM tasks WHERE status='backlog' AND id LIKE 'TSK-%'"
-```
+**陷阱**：assignee 存的是 **profile 名**（如 `xingruyin`），不是 `agent-xingruyin`。
 
 ---
 
 ## 四、更新看板进度
 
-### 4.1 完成任务（核心流程）
+### 4.1 完成任务标准流程
 
-**原则：SQLite 更新状态 → Obsidian 文件迁移 → Git 提交**
+参见 `kanban-worker` skill — **Task Completion Checklist**。
 
-**Step 1：更新 SQLite 状态**
+**核心原则**：`kanban-sync` skill 同步 SQLite → Obsidian；手动补 Git 提交。
+
+### 4.2 步骤一：更新 SQLite 状态
 
 ```python
 import sqlite3
@@ -285,7 +248,7 @@ from datetime import datetime, timezone
 conn = sqlite3.connect('/home/agentuser/.hermes/kanban.db')
 cur = conn.cursor()
 
-task_id = 'TSK-20260505-001'
+task_id = 'TSK-YYYYMMDD-NNN'
 
 # 更新任务状态
 cur.execute("""
@@ -312,25 +275,24 @@ conn.commit()
 conn.close()
 ```
 
-**Step 2：迁移 Obsidian 文件 + 更新 frontmatter**
+### 4.3 步骤二：迁移 Obsidian 文件
 
 ```python
 import shutil, re, os
 from datetime import datetime, timezone
 
-task_id = 'TSK-20260505-001'
+task_id = 'TSK-YYYYMMDD-NNN'
 project = '{project}'
 vault = '/home/agentuser/obsidian-vault'
-date_seq = task_id.split('-')  # ['TSK', '20260505', '001']
 
 old_path = f"{vault}/00-项目管理/{project}/backlog/{task_id}.md"
 new_path = f"{vault}/00-项目管理/{project}/done/{task_id}.md"
 
-# 1. 迁移文件
+# 迁移文件
 os.makedirs(f"{vault}/00-项目管理/{project}/done", exist_ok=True)
 shutil.move(old_path, new_path)
 
-# 2. 更新 frontmatter
+# 更新 frontmatter
 with open(new_path, 'r') as f:
     content = f.read()
 
@@ -341,7 +303,7 @@ with open(new_path, 'w') as f:
     f.write(content)
 ```
 
-**Step 3：Git 提交**
+### 4.4 步骤三：Git 提交
 
 ```bash
 cd /home/agentuser/obsidian-vault
@@ -350,9 +312,11 @@ git commit -m "done(kanban): 完成任务 {task_id}"
 git push
 ```
 
-### 4.2 更新进度总览文档
+### 4.5 同步进度总览文档
 
-由 `kanban-sync` 脚本自动维护。如需手动更新看板开发任务.md：
+参见 `kanban-sync` skill — **进度总览自动维护**。
+
+由 sync 脚本自动更新 `看板开发任务.md`。手动更新时：
 
 ```python
 import re
@@ -362,15 +326,7 @@ doc_path = '/home/agentuser/obsidian-vault/00-项目管理/基于任务驱动的
 with open(doc_path, 'r') as f:
     content = f.read()
 
-# 重新计算合计行
-total = done + backlog
-pct = int(done / total * 100) if total > 0 else 0
-
-# 替换合计行
-old合计 = re.search(r'\|\*\*合计\*\*.*?\*\*', content, re.DOTALL).group()
-new合计 = f"| **合计** | **{total}** | **{done}** | 0 | **{backlog}** | 0 | **{deprecated}** |"
-content = content.replace(old合计, new合计)
-
+# 替换合计行（基于 SQLite 查询的真实数字）
 # 替换进度行
 content = re.sub(
     r'\*\*整体进度：.*?\*\*',
@@ -386,54 +342,31 @@ with open(doc_path, 'w') as f:
 
 ## 五、查看任务详情
 
-**原则：任务详情看 Obsidian，状态变更操作 SQLite**
-
-### 5.1 读任务卡片（Obsidian .md）
+### 5.1 读 Obsidian 任务卡片
 
 ```python
-def read_task_detail(task_id: str) -> str:
-    """根据 task_id 找到对应的 .md 文件并返回内容"""
-    import os, glob
+import glob
 
+def find_task_file(task_id: str) -> str:
+    """根据 task_id 找到对应的 .md 文件"""
     vault = '/home/agentuser/obsidian-vault'
-    project_dirs = glob.glob(f"{vault}/00-项目管理/*/")
-
-    for proj in project_dirs:
-        for subdir in ['backlog', 'done', 'in-progress', 'review']:
-            pattern = f"{proj}{subdir}/{task_id}.md"
-            matches = glob.glob(pattern)
-            if matches:
-                with open(matches[0], 'r') as f:
-                    return f.read()
+    for subdir in ['backlog', 'done', 'in-progress', 'review']:
+        pattern = f"{vault}/00-项目管理/*/{subdir}/{task_id}.md"
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
     return None
 
-# 示例
-detail = read_task_detail('TSK-20260504-009')
-print(detail)
+path = find_task_file('TSK-YYYYMMDD-NNN')
+with open(path, 'r') as f:
+    content = f.read()
+# content 包含 frontmatter + 任务目标 + 检查点历史 + 笔记
 ```
 
-### 5.2 从 Obsidian frontmatter 提取状态
+### 5.2 查 checkpoints 历史（SQLite）
 
 ```python
-import re, frontmatter
-
-def get_task_frontmatter(task_id: str) -> dict:
-    path = find_task_file(task_id)  # 用上面 5.1 的方法
-    post = frontmatter.load(path)
-    return {
-        'id': post['id'],
-        'title': post['title'],
-        'status': post['status'],
-        'priority': post['priority'],
-        'assignee': post['assignee'],
-        'created': post['created'],
-        'updated': post['updated'],
-    }
-```
-
-### 5.3 从 checkpoints 了解任务历史（SQLite）
-
-```python
+import sqlite3
 conn = sqlite3.connect('/home/agentuser/.hermes/kanban.db')
 cur = conn.cursor()
 
@@ -458,15 +391,14 @@ conn.close()
 
 ## 六、常见操作速查
 
-| 操作 | 命令/方法 |
-|------|----------|
-| 新建任务 | 创建 .md + `INSERT INTO tasks` + git commit |
-| 查看所有 backlog | `find .../backlog/TSK-*.md` 或 `SELECT COUNT(*) FROM tasks WHERE status='backlog'` |
-| 查任务详情 | `read_task_detail(task_id)` → 读 Obsidian .md |
-| 完成任务 | `UPDATE tasks SET status='done'` + 迁移文件 + git commit |
-| 写 checkpoint | `INSERT INTO checkpoints` + 追加到 .md 的检查点历史章节 |
-| 查整体进度 | `SELECT status, COUNT(*) FROM tasks GROUP BY status` |
-| 同步到 Git | `cd /home/agentuser/obsidian-vault && git add -A && git commit -m "..." && git push` |
+| 操作 | 方法 |
+|------|------|
+| 新建看板任务 | 加载 `kanban-orchestrator` → `kanban_create()` |
+| 查询待办列表 | 加载 `kanban-todo` → 执行脚本或 SQLite 查询 |
+| 完成任务 | 加载 `kanban-worker` → SQLite 更新 + 文件迁移 + Git |
+| 同步进度总览 | 加载 `kanban-sync` → 执行 sync.py |
+| 查看任务详情 | 读 Obsidian .md + SQLite checkpoints |
+| 查整体进度统计 | SQLite: `SELECT status, COUNT(*) FROM tasks GROUP BY status` |
 
 ---
 
@@ -479,6 +411,7 @@ conn.close()
 | 看板总览文档 | `00-项目管理/基于任务驱动的看板机制研究/.kanban/{project}-看板总览.md` |
 | 任务卡片 | `00-项目管理/{project}/{status}/TSK-{date}-{seq}.md` |
 | 任务模板 | `00-项目管理/{project}/templates/task-template.md` |
+| kanban-todo 脚本 | `/home/agentuser/.hermes/skills/kanban-todo/scripts/kanban_todo.py` |
 | kanban-sync 脚本 | `/home/agentuser/.hermes/skills/kanban-sync/scripts/sync.py` |
 
 ---
@@ -488,4 +421,5 @@ conn.close()
 1. **不要**用 `Path.home()` 或 `~/.hermes` 硬编码路径 → 使用 `/home/agentuser/.hermes/kanban.db`
 2. **不要**把 frontmatter 里的 `status` 当作权威状态 → SQLite 才是
 3. **不要**跳过 Git 提交 → Obsidian 没有自动保存到 Git
-4. **不要**相信空的 kanban.db → 用 `find .../backlog/TSK-*.md` 核对文件系统
+4. **不要**用 `agent_id` 查 assignee → 用 profile 名（如 `xingruyin`）
+5. **不要**相信空的 kanban.db → 用 `find .../backlog/TSK-*.md` 核对文件系统
