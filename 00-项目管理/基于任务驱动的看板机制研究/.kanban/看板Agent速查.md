@@ -42,8 +42,8 @@ frontmatter 必须字段：`id`, `title`, `status`, `priority`, `assignee`, `cre
 
 ## 进度总览
 
-| 阶段 | 总数 | Done | In Progress | Backlog | Blocked |
-|------|------|------|-------------|---------|---------|
+| 阶段 | 总数 | ✅ Done | 🔄 In Progress | 📋 Backlog | 🔴 Blocked |
+|------|------|---------|----------------|------------|------------|
 
 ---
 
