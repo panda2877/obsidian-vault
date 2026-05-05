@@ -1,6 +1,7 @@
 # 看板速查
 
 > **SQLite = 进度权威 | Obsidian = 任务详情**
+> **模板和脚本已迁移至统一 skill 目录：`/home/agentuser/.hermes/skills/kanban/`**
 
 ---
 
@@ -8,59 +9,39 @@
 
 | 做什么 | 见章节 |
 |--------|--------|
-| 新建任务 | § 新建 |
-| 认领任务 / 查待办 | § 待办 |
-| 完成任务 | § 完成 |
-| 查任务详情 | § 详情 |
-| 同步进度总览 | § 同步 |
-| 判断要不要建看板 | § 编排 |
+| 新建看板 + 任务 | `kanban` skill → references/kanban-agent-guide.md § 新建 |
+| 认领任务 / 查待办 | `kanban-todo` skill |
+| 完成任务（强制 sync.py） | `kanban` skill → references/kanban-agent-guide.md § 完成 |
+| 查任务详情 | `kanban` skill → references/kanban-agent-guide.md § 详情 |
+| 同步进度总览 | `kanban-sync` skill |
+| 判断要不要建看板 | `kanban-orchestrator` skill |
+| 高频踩坑 | `/home/agentuser/.hermes/skills/kanban/references/kanban-pitfalls.md` |
 
 ---
 
 ## § 新建
 
-```bash
-# 1. kanban_create → SQLite
-# 2. 创建 .md 文件（backlog/）
-# 3. 创建项目汇总 .md 文件（见下方命名规范）
-# 4. git add + commit + push
-```
+完整步骤见：`/home/agentuser/.hermes/skills/kanban/references/kanban-agent-guide.md`
 
-frontmatter 必须字段：`id`, `title`, `status`, `priority`, `assignee`, `created`, `updated`
-
-### 汇总文件规范
-
-**必须创建项目汇总文件**，放在项目根目录，命名：`{项目名称}.md`。
-
-使用模板：[[.kanban/看板汇总模板|看板汇总模板]]（直接复制展开，替换占位符）
-
-**禁止**：汇总文件命名用"看板开发任务"等通用名 → 必须用项目名称
+**模板位置（不再在各项目目录下重复）：**
+`/home/agentuser/.hermes/skills/kanban/templates/看板汇总模板.md`
 
 ---
 
 ## § 待办
 
 ```bash
-python3 /home/agentuser/.hermes/skills/kanban-todo/scripts/kanban_todo.py
-```
-
-```sql
-SELECT status, COUNT(*) FROM tasks WHERE id LIKE 'TSK-%' GROUP BY status
+python3 /home/agentuser/.hermes/skills/kanban/scripts/kanban_todo.py
 ```
 
 ---
 
-## § 完成
+## § 完成（强制跑 sync.py）
 
-```sql
--- 1. 更新 SQLite
-UPDATE tasks SET status='done', completed_at=? WHERE id='{id}';
-INSERT INTO checkpoints (id, task_id, phase, summary, agent_id, created_at)
-  VALUES ('{id}-f', '{id}', 'done', '完成', 'xingruyin', '{iso}');
+sync.py 是强制步骤，完整步骤见：`/home/agentuser/.hermes/skills/kanban/references/kanban-agent-guide.md`
 
--- 2. 迁移文件 backlog/ → done/，frontmatter status: done
-
--- 3. git add + commit + push
+```bash
+python3 /home/agentuser/.hermes/skills/kanban/scripts/sync.py
 ```
 
 ---
@@ -69,7 +50,7 @@ INSERT INTO checkpoints (id, task_id, phase, summary, agent_id, created_at)
 
 ```python
 # Obsidian 文件
-glob("/home/agentuser/obsidian-vault/00-项目管理/*/{backlog,done}/{id}.md")
+find /home/agentuser/obsidian-vault/00-项目管理 -name "{task_id}.md" 2>/dev/null
 
 # checkpoints
 SELECT phase, summary, blockers, next_steps, created_at
@@ -78,51 +59,26 @@ FROM checkpoints WHERE task_id='{id}' ORDER BY created_at
 
 ---
 
-## § 同步
-
-```bash
-python3 /home/agentuser/.hermes/skills/kanban-sync/scripts/sync.py
-```
-
----
-
-## § 编排
-
-加载 `kanban-orchestrator` skill。判断是否建看板：
-- 多角色协作 / 持久化 / 需人工介入 / 需并行 / 需 review / 审计追踪 → 建看板
-- 否则 → `delegate_task` 或直接执行
-
----
-
-## 路径
+## 路径速查
 
 ```
 SQLite:   /home/agentuser/.hermes/kanban.db
-vault:    /home/agentuser/obsidian-vault/
-任务卡:   00-项目管理/{project}/{status}/TSK-{date}-{seq}.md
-进度总览: .kanban/看板开发任务.md
-速查:     .kanban/看板Agent速查.md
+vault:    /home/agentuser/obsidian-vault/00-项目管理/
+skill:    /home/agentuser/.hermes/skills/kanban/
+模板:     /home/agentuser/.hermes/skills/kanban/templates/看板汇总模板.md
+脚本:     /home/agentuser/.hermes/skills/kanban/scripts/sync.py
+速查:     /home/agentuser/.hermes/skills/kanban/references/kanban-agent-guide.md
 ```
 
 ---
 
 ## 禁止（高频踩坑）
 
-```
-✗ Path.home() / ~/.hermes       → /home/agentuser/.hermes/kanban.db
-✗ frontmatter status 当权威      → SQLite 才是
-✗ 不 git commit 直接 push
-✗ assignee 用 agent_id          → 用 profile 名（xingruyin）
-✗ kanban.db 为空时相信它         → find .../backlog/TSK-*.md 核对
-```
-
----
-
-## skill 速查
-
-| 场景 | skill |
-|------|-------|
-| 判断要不要建 + 分解 | `kanban-orchestrator` |
-| 查待办列表 | `kanban-todo` |
-| 完成任务 | `kanban-worker` |
-| 同步 SQLite→Obsidian | `kanban-sync` |
+| 禁止 | 正确做法 |
+|------|----------|
+| `Path.home()` / `~/.hermes` | 硬编码 `/home/agentuser/.hermes/kanban.db` |
+| frontmatter status 当权威 | SQLite 才是 |
+| 不 git commit 直接 push | 先 commit |
+| assignee 用 agent_id | 用 profile 名（`xingruyin`）|
+| kanban.db 为空时相信它 | `find .../backlog/TSK-*.md` 核对 |
+| 用 `terminal` 写 SQLite | 用 `execute_code` |
