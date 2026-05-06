@@ -404,7 +404,7 @@ model_list:
     litellm_params:
       model: minimax/MiniMax-M2.7     # LiteLLM 内置 provider 格式
       api_key: os.environ/MINIMAX_API_KEY
-      api_base: https://api.minimaxi.com/anthropic/v1  # MiniMax API 接入点
+      api_base: https://api.minimaxi.com/v1  # 注意：要使用 OpenAI 兼容格式（/v1），不要用 /anthropic/v1。LiteLLM 会追加 /chat/completions
 
   # ── 备模型：DeepSeek（优先级 2）─────────────────
   - model_name: deepseek-backup       # 逻辑名，Fallback 目标
@@ -682,24 +682,26 @@ VmSize:  8.5 MB   ← 虚拟地址空间（不代表真实占用）
 
 > 远低于文档预测的 200–400 MB，说明无数据库模式极其轻量。
 
-**API 调用测试结果：**
+**API 调用测试结果（链路①：主链路通过 LiteLLM）：**
 ```bash
-# 测试 deepseek-sensenova（主模型）
-curl -X POST http://localhost:4000/v1/messages \
+# ✅ deepseek-sensenova（通过 LiteLLM Proxy 转发）
+curl -s --max-time 30 http://localhost:4000/v1/chat/completions \
   -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
-  -d '{"model":"deepseek-sensenova","max_tokens":10,"messages":[{"role":"user","content":"1+1=?"}]}'
+  -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-sensenova","messages":[{"role":"user","content":"1+1=?"}],"max_tokens":10}'
+# 响应：{"model":"deepseek-sensenova","choices":[{"message":{"content":"1+1 equals 2."}}]}
+# Token: prompt=8, completion=39, total=47
 
-# ✅ 响应成功：{"model":"deepseek-sensenova","content":[{"type":"text","text":"1+1=2"}]}
-# Token: input=8, output=34, total=42
-
-# 测试 minimax-main（备模型）
-curl -X POST http://localhost:4000/v1/messages \
+# ✅ minimax-main（修复 api_base 后通过 LiteLLM 正常工作）
+curl -s --max-time 30 http://localhost:4000/v1/chat/completions \
   -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
-  -d '{"model":"minimax-main","max_tokens":10,"messages":[{"role":"user","content":"2+2=?"}]}'
-
-# ✅ 响应成功：{"model":"minimax-main","content":[{"type":"text","text":"The answer is **4**."}]}
-# Token: input=8, output=7, total=15
+  -H "Content-Type: application/json" \
+  -d '{"model":"minimax-main","messages":[{"role":"user","content":"你是谁？"}],"max_tokens":50}'
+# 响应：{"model":"minimax-main","choices":[{"message":{"content":"\n\n\n\n我是 MiniMax-M2.7"}}]}
+# 注意：api_base 必须设为 https://api.minimaxi.com/v1（不要用 /anime/v1），
+# 因为 LiteLLM 会追加 /chat/completions。
 ```
+
 
 **Swagger UI：** `http://localhost:4000/` ✅ 正常（返回 Swagger HTML）
 **Admin UI：** `http://localhost:4000/ui` ✅ 可访问
@@ -712,9 +714,36 @@ LiteLLM Proxy **完全满足**银月的五项核心需求，且实际表现超�
 - **零 API 调用额外损耗**：关闭健康检查 + 关闭重试后，每个失败请求最多 2 次调用
 - **内存占用极低**：实测 5.2 MB RSS（比预测的 200–400 MB 还轻量）
 - **开箱即用的用量观测**：Admin UI + REST API，无需额外搭建监控系统
-- **配置简单**：纯 YAML 配置，无需数据库初始化
+| **配置简单**：纯 YAML 配置，无需数据库初始化
 
-### 8.2 后续扩展方向
+### 8.5 三层 Fallback 测试结果（2026-05-06 下午实测）
+
+在部署完成后，对三层 fallback 链路进行了系统性测试：
+
+| 测试 | 链路 | 方法 | 结果 |
+|------|------|------|------|
+| ① 主链路 | Hermes → LiteLLM Proxy → deepseek-sensenova | 正常对话 + 直接 API 调用 | ✅ 通过 |
+| ② LiteLLM 内部 Fallback | deepseek-sensenova → minimax-main → deepseek-backup | 临时改错 deepseek API Key，触发自动切换 | ✅ 通过（完整链条 A→B→C 均尝试） |
+| ③ Hermes fallback_providers | LiteLLM Proxy 宕机 → minimax_domestic（原生直连）→ deepseek（原生直连） | 停掉 LiteLLM Proxy 进程 | ✅ 通过（自动切回原生 API） |
+
+**测试②的详细过程**（验证了完整的 3 步 fallback 链）：
+
+```
+请求 deepseek-sensenova
+  → API Key 错误（故意改错）❌
+  → fallback 到 minimax-main
+    → api_base 路径问题导致 404 ❌ （已修复）
+    → fallback 到 deepseek-backup
+      → 响应成功 ✅
+```
+
+**发现并解决的问题：**
+
+- **问题**：`minimax-main` 的 `api_base` 原设为 `https://api.minimaxi.com/anthropic/v1`，但 LiteLLM 会在这个路径后追加 `/chat/completions`，导致最终 URL 为 `https://api.minimaxi.com/anthropic/v1/chat/completions`（404）
+- **修复**：改为 `https://api.minimaxi.com/v1`，LiteLLM 追加后为 `https://api.minimaxi.com/v1/chat/completions`，这是 MiniMax 的 OpenAI 兼容接口 ✅
+- **注意**：Hermes 通过 custom provider 原生直连 MiniMax 时（`fallback_providers` 场景），使用的是 Anthropic 兼容格式 `https://api.minimaxi.com/anthropic`，不受此影响
+
+### 8.6 后续扩展方向
 
 当团队需求演进到以下阶段时，可按需升级：
 
