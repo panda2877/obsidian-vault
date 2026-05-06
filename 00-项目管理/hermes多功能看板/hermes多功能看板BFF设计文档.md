@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.0 | **日期**：2026-05-06 | **作者**：辛如音
+> **版本**：v1.1 | **日期**：2026-05-07 | **作者**：辛如音
 
 ---
 
@@ -105,7 +105,7 @@ npm run build:mp-toutiao   # 头条小程序
 | 运行时 | **Node.js 22** | 已安装于服务器 |
 | Web 框架 | **Express** | 轻量、生态成熟 |
 | PostgreSQL 驱动 | **pg** | Node.js 原生异步驱动 |
-| SQLite 驱动 | **better-sqlite3** | 同步高性能，适合本地文件 DB |
+| SQLite 驱动 | **sql.js** | 纯 JS（WASM），无需本地编译 |
 | 进程管理 | **pm2** | 生产级守护 + 自动重启 |
 | 开发热重载 | **nodemon** | 开发模式自动重启 |
 
@@ -145,6 +145,7 @@ backend/
 |:----:|:----|:------|
 | GET | `/api/tokens/summary` | 总览（总 Token / 总花费 / 按模型分布） |
 | GET | `/api/tokens/daily` | 按日聚合趋势 |
+| GET | `/api/tokens/trend` | 按粒度聚合趋势（支持 `2hour` / `daily` / `weekly`） |
 | GET | `/api/tokens/by-model` | 按模型分组统计 |
 | GET | `/api/tokens/models` | 有消耗记录的模型列表 |
 | GET | `/api/tokens/logs` | 明细日志（分页） |
@@ -171,9 +172,11 @@ backend/
 | 参数 | 类型 | 说明 |
 |:----:|:----:|:------|
 | status | string | `backlog` / `in_progress` / `done`，不传则全量 |
-| assignee | string | 按负责人筛选 |
-| priority | string | 按优先级筛选 |
-| project | string | 按项目筛选 |
+| assignee | string | 按负责人英文 key 筛选 |
+| priority | string | 按优先级筛选（`P0` / `P1` / `P2`，或数字 `1` / `2` / `3`） |
+| project | string | 按 `workspace_path` 精确筛选（完整路径） |
+
+> **状态值归一化**：Hermes CLI 写入状态为 `in-progress`（连字符），BFF 归一化为 `in_progress`（下划线）后返回前端；`completed` 也归一化为 `done`。统计接口 `stats` 会合并 `in_progress` + `in-progress` 和 `done` + `completed`。
 
 ### 3.4 Agent 状态
 
@@ -306,9 +309,22 @@ ORDER BY date, model_group;
 | 文件路径 | `/home/agentuser/.hermes/kanban.db` |
 | 驱动 | `sql.js`（纯 JS 方案，WASM 加载，无需本地编译） |
 
-### 5.2 核心查询
+### 5.2 SQLite 数据库连接方案（sql.js）
 
-#### 5.2.1 获取所有任务（`/api/kanban/tasks`）
+**文件**：`backend/services/sqlite.js`
+
+sql.js 通过 WASM 加载 SQLite，无需本地编译。启动时从文件加载 DB，后续 BFF 请求通过 `reloadIfChanged()` 检测文件 mtime 变化自动重载；写操作（`updateTaskStatus`）调用 `saveDb()` 持久化到磁盘。
+
+**状态归一化函数**（`normalizeStatus`）：
+
+```javascript
+// Hermes CLI 写入 in-progress（连字符），BFF 归一化为 in_progress（下划线）
+function normalizeStatus(status) {
+  return status === 'in-progress' ? 'in_progress' : status
+}
+```
+
+#### 5.2.1 获取任务列表（`/api/kanban/tasks`）
 
 ```sql
 SELECT
@@ -317,39 +333,67 @@ SELECT
   status,
   priority,
   assignee,
-  workspace_path  AS project,
+  workspace_path   AS project,
   workflow_template_id AS phase,
   created_at,
+  started_at,
   completed_at
 FROM tasks
 WHERE 1=1
-  -- 以下为可选筛选条件，由 BFF 动态拼接
-  -- AND status = ?
-  -- AND assignee = ?
-  -- AND priority = ?
-  -- AND workspace_path = ?
+  AND (? = '' OR status       = ?)   -- 可选 status 筛选
+  AND (? = '' OR assignee      = ?)   -- 可选 assignee 筛选
+  AND (? = '' OR priority      = ?)   -- 可选 priority 筛选
+  AND (? = '' OR workspace_path = ?)  -- 可选 project 筛选
 ORDER BY
-  CASE status
-    WHEN 'in_progress' THEN 0
-    WHEN 'backlog' THEN 1
-    WHEN 'done' THEN 2
+  CASE
+    WHEN status IN ('in_progress', 'in-progress') THEN 0
+    WHEN status = 'backlog'                        THEN 1
+    WHEN status IN ('done', 'completed')            THEN 2
+    ELSE 3
   END,
-  CASE priority
-    WHEN 'P0' THEN 0
-    WHEN 'P1' THEN 1
-    WHEN 'P2' THEN 2
-  END,
+  CASE priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 END,
   created_at DESC;
 ```
 
-#### 5.2.2 看板统计（`/api/kanban/stats`）
+返回格式：`{ total: number, data: Task[] }`，每条 Task 的 `status` 经过 `normalizeStatus` 处理。
+
+#### 5.2.2 获取单个任务（`/api/kanban/tasks/:id`）
 
 ```sql
 SELECT
-  status,
-  COUNT(*) AS count
+  id, title, body, status, priority,
+  assignee,
+  workspace_path  AS project,
+  workflow_template_id AS phase,
+  created_at, started_at, completed_at,
+  skills, project_name
+FROM tasks WHERE id = ?;
+```
+
+#### 5.2.3 更新任务状态（`PUT /api/kanban/tasks/:id/status`）
+
+```sql
+-- done/completed：写入 completed_at
+UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?
+
+-- 其他状态：清除 completed_at
+UPDATE tasks SET status = ?, completed_at = NULL WHERE id = ?
+```
+
+> **注意**：BFF 写入后调用 `saveDb()` 将内存 DB 写入磁盘。
+
+#### 5.2.4 看板统计（`/api/kanban/stats`）
+
+```sql
+SELECT status, COUNT(*) AS count
 FROM tasks
 GROUP BY status;
+```
+
+返回后 BFF 内存合并 `in_progress` + `in-progress` 和 `done` + `completed`，最终格式：
+
+```json
+{ "backlog": 5, "in_progress": 2, "done": 3 }
 ```
 
 ---
@@ -480,27 +524,54 @@ export default defineConfig({
 ### 8.1 Token 统计页面加载流程
 
 ```
-1. 用户打开统计看板页
-2. dashboard.vue → store/stats.ts → fetchData()
-3. uni.request('/api/tokens/summary?startDate=2026-05-01&endDate=2026-05-07')
-4. BFF /tokens/summary:
-   a. 先查 PostgreSQL LiteLLM_DailyTeamSpend（预聚合表，快速）
-   b. 聚合返回：{ totalTokens, totalCost, modelDistribution }
-5. 同时调用 /api/tokens/daily?startDate=...&endDate=...
-6. BFF 执行按日聚合 SQL
+1. 用户打开统计页 dashboard.vue
+2. → store/stats.ts → fetchSummary() + fetchDaily()
+3. uni.request('/api/tokens/summary?startDate=...&endDate=...')
+4. BFF /tokens/summary: 查 PostgreSQL LiteLLM_SpendLogs，返回
+   { totalTokens, totalPromptTokens, totalCompletionTokens, totalCost, modelDistribution[] }
+5. uni.request('/api/tokens/daily?startDate=...&endDate=...')
+6. BFF /tokens/daily: 按日聚合，返回 { startDate, endDate, data: [{ date, promptTokens, completionTokens, tokens, cost }] }
 7. 前端 uCharts 渲染柱状图 + 饼图
 ```
 
-### 8.2 看板页面加载流程
+### 8.2 看板页面加载流程（已实现）
 
 ```
-1. 用户打开任务看板页
-2. kanban.vue → store/kanban.ts → fetchTasks()
-3. uni.request('/api/kanban/tasks')
-4. BFF 查询 SQLite kanban.db → tasks 表
-5. 返回按状态分组的任务列表
-6. 前端渲染三列看板
+1. 用户打开任务看板页 kanban.vue
+2. → store/kanban.ts → refresh() 并行调用 fetchTasks() + fetchStats()
+3. fetchTasks() → GET /api/kanban/tasks（不带 project 参数，返回全量）
+4. BFF 查询 SQLite kanban.db → tasks 表，经历 normalizeStatus 归一化
+5. 前端本地：
+   a. allTasks 保存全量任务（供 picker 选项用）
+   b. project 筛选：用 shortProject() 提取 workspace_path 末段作短项目名，在前端过滤
+   c. assignee/priority 筛选：BFF 查询时传递，由 SQLite WHERE 条件过滤
+   d. 任务分配到 backlog / inProgress / done 三列（按 ID 升序排列）
+6. fetchStats() → GET /api/kanban/stats
+7. BFF 返回原始 status 计数，BFF 内存合并 in_progress+in-progress / done+completed
+8. 前端渲染三列看板 + 顶部统计条
 ```
+
+**拖拽更新任务状态（乐观 UI）**：
+
+```
+1. 用户拖拽任务到新列
+2. store.moveTask(taskId, toStatus):
+   a. 乐观更新：从旧列移除，插入新列（本地立即响应）
+   b. PUT /api/kanban/tasks/{id}/status { status: toStatus }
+   c. BFF UPDATE tasks + saveDb() 持久化
+   d. 失败时回滚：调用 fetchTasks() 重新拉取全量
+```
+
+**负责人名称中英对照**（前端固定映射）：
+
+| 英文 key | 中文 |
+|:--------|:-----|
+| `yinyue` | 银月 |
+| `xingruyin` | 辛如音 |
+| `ziling` | 紫灵 |
+| `siyue` | 思月 |
+
+前端 picker 显示中文，BFF 接收英文 key 筛选。
 
 ---
 
