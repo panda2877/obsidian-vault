@@ -325,10 +325,14 @@
 
     /* ===== Login Page ===== */
     #login-page {
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       flex: 1;
+    }
+
+    #login-page.active {
+      display: flex;
     }
 
     .login-box {
