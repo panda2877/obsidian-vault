@@ -143,6 +143,46 @@
       gap: 8px;
     }
 
+    /* ===== Mobile Tab Bar ===== */
+    .mobile-tab-bar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-subtle);
+      padding: 6px 0 env(safe-area-inset-bottom, 6px);
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .tab-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 16px;
+      border-radius: var(--radius-md);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-disabled);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .tab-link svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .tab-link:hover { color: var(--text-secondary); }
+    .tab-link.active { color: var(--accent); }
+    .tab-link.active svg { opacity: 1; }
+
     /* ===== Page Shell ===== */
     .page {
       flex: 1;
@@ -906,8 +946,28 @@
     }
 
     @media (max-width: 640px) {
-      .nav-links { display: none; }
+      .nav-links { display: none !important; }
       .nav { padding: 0 16px; }
+      .nav-right .btn-icon { display: none; }
+
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px 16px; }
+      .stat-value { font-size: 22px; }
+      .chart-area { grid-template-columns: 1fr; }
+      .kanban-board { grid-template-columns: 1fr; }
+      .agent-grid { grid-template-columns: 1fr; }
+      .page-body { padding: 16px; padding-bottom: 80px; }
+      .page-header {
+        padding: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .filter-row { flex-wrap: wrap; }
+      .login-box { padding: 0 16px; }
+      .login-card { padding: 24px; }
+
+      .mobile-tab-bar { display: flex !important; }
     }
 
     /* ===== Login Error State ===== */
@@ -1450,6 +1510,7 @@
       input.classList.remove('error');
       isLoggedIn = true;
       document.getElementById('nav').style.display = 'flex';
+      document.getElementById('mobile-tab-bar').style.display = 'flex';
       navigate('stats-page');
     } else {
       input.classList.add('error');
@@ -1459,6 +1520,7 @@
   function logout() {
     isLoggedIn = false;
     document.getElementById('nav').style.display = 'none';
+    document.getElementById('mobile-tab-bar').style.display = 'none';
     document.getElementById('key-input').value = '';
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('login-page').classList.add('active');
@@ -1470,6 +1532,9 @@
     document.getElementById(pageId).classList.add('active');
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
+    // 同步更新底部 Tab
+    document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+    document.querySelector(`.tab-link[data-page="${pageId}"]`)?.classList.add('active');
   }
 
   function setFilter(btn, period) {
