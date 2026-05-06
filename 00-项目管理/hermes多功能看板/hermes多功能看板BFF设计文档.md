@@ -221,8 +221,8 @@ SELECT
   SUM(total_tokens)    AS total_tokens,
   SUM(spend)           AS cost
 FROM "LiteLLM_SpendLogs"
-WHERE startTime >= $1::timestamp
-  AND startTime <  $2::timestamp
+WHERE "startTime" >= $1::timestamp
+  AND "startTime" <  $2::timestamp
 GROUP BY model_group
 ORDER BY total_tokens DESC;
 ```
@@ -237,8 +237,8 @@ SELECT
   SUM(total_tokens)       AS total_tokens,
   SUM(spend)              AS cost
 FROM "LiteLLM_SpendLogs"
-WHERE startTime >= $1::timestamp
-  AND startTime <  $2::timestamp
+WHERE "startTime" >= $1::timestamp
+  AND "startTime" <  $2::timestamp
 GROUP BY DATE(startTime)
 ORDER BY day;
 ```
@@ -261,8 +261,8 @@ SELECT
   model_group,
   SUM(total_tokens) AS tokens
 FROM "LiteLLM_SpendLogs"
-WHERE startTime >= $1::timestamp
-  AND startTime <  $2::timestamp
+WHERE "startTime" >= $1::timestamp
+  AND "startTime" <  $2::timestamp
 GROUP BY model_group
 ORDER BY tokens DESC;
 ```
@@ -304,7 +304,7 @@ ORDER BY date, model_group;
 | 配置项 | 值 |
 |:----:|:----|
 | 文件路径 | `/home/agentuser/.hermes/kanban.db` |
-| 驱动 | `better-sqlite3`（Node.js 原生同步驱动） |
+| 驱动 | `sql.js`（纯 JS 方案，WASM 加载，无需本地编译） |
 
 ### 5.2 核心查询
 
@@ -356,35 +356,55 @@ GROUP BY status;
 
 ## 六、启动与部署
 
-### 6.1 开发模式
+### 6.1 统一启动脚本
+
+项目根目录提供统一启动脚本 `start.sh`，所有启动方式统一走此脚本：
 
 ```bash
-# 安装依赖
+cd /home/agentuser/public/hermes-dashboard
+
+# 开发模式（前台运行，Ctrl+C 停止）
+./start.sh
+
+# 生产模式（pm2 后台运行）
+./start.sh prod
+
+# 停止生产服务
+./start.sh stop
+
+# 查看 pm2 服务状态
+./start.sh status
+```
+
+**开发模式输出：**
+- 前端 H5：`http://localhost:5173`
+- BFF API：`http://localhost:3001`
+- Vite 代理：`/api` → `localhost:3001`，前端无需跨域配置
+
+**生产模式：**
+1. pm2 启动 BFF（端口 3001）
+2. 构建前端 H5 产物到 `dist/`
+3. Nginx 托管 `dist/` 目录，`/api` 反向代理到 BFF
+
+> ⚠️ 生产模式需先安装 pm2：`npm install -g pm2`
+
+### 6.2 手动启动（备用）
+
+如不使用统一脚本，可手动分步启动：
+
+```bash
+# 1. 安装后端依赖
 cd /home/agentuser/public/hermes-dashboard/backend
 npm install
 
-# 启动 BFF（nodemon 热重载）
-npm run dev
+# 2. 启动 BFF（后台运行）
+cd backend && node server.js &
+sleep 2
+curl http://localhost:3001/health  # 验证启动成功
 
-# 同时启动前端（另一个终端）
+# 3. 启动前端开发服务器（另一个终端）
 cd /home/agentuser/public/hermes-dashboard
 npm run dev:h5
-```
-
-### 6.2 生产模式
-
-```bash
-# 构建前端
-cd /home/agentuser/public/hermes-dashboard
-npm run build:h5
-
-# 使用 pm2 启动 BFF
-cd backend
-pm2 start ecosystem.config.js
-
-# 查看状态
-pm2 status
-pm2 logs hermes-dashboard-bff
 ```
 
 ### 6.3 pm2 配置（`ecosystem.config.js`）
