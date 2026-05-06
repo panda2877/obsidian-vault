@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes 多功能看板 — UI 设计原型</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Design Tokens — Linear-inspired dark theme ===== */
+    :root {
+      --bg-canvas: #08090a;
+      --bg-panel: #0f1011;
+      --bg-surface: #191a1b;
+      --bg-elevated: #28282c;
+      --bg-card: rgba(255,255,255,0.02);
+      --bg-card-hover: rgba(255,255,255,0.04);
+
+      --text-primary: #f7f8f8;
+      --text-secondary: #d0d6e0;
+      --text-muted: #8a8f98;
+      --text-disabled: #62666d;
+
+      --accent: #7170ff;
+      --accent-hover: #828fff;
+      --accent-bg: #5e6ad2;
+      --accent-bg-hover: #6b72dd;
+
+      --success: #10b981;
+      --success-dim: #27a644;
+      --warning: #f59e0b;
+      --error: #ef4444;
+
+      --border: rgba(255,255,255,0.08);
+      --border-subtle: rgba(255,255,255,0.05);
+      --border-solid: #23252a;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-full: 9999px;
+
+      --shadow-sm: rgba(0,0,0,0.2) 0px 0px 0px 1px;
+      --shadow-md: rgba(0,0,0,0.4) 0px 2px 4px;
+      --shadow-lg: rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px;
+
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+      --transition: 0.15s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Layout ===== */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ===== Navigation ===== */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 52px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 32px;
+      flex-shrink: 0;
+    }
+
+    .nav-logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .nav-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary);
+      background: var(--bg-card);
+    }
+
+    .nav-link.active {
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .nav-link svg { width: 16px; height: 16px; opacity: 0.7; }
+    .nav-link.active svg { opacity: 1; }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== Page Shell ===== */
+    .page {
+      flex: 1;
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .page.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 24px 32px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .page-body {
+      padding: 28px 32px;
+    }
+
+    /* ===== Buttons ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1px solid transparent;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .btn svg { width: 14px; height: 14px; }
+
+    .btn-primary {
+      background: var(--accent-bg);
+      color: #fff;
+      border-color: var(--accent-bg);
+    }
+    .btn-primary:hover { background: var(--accent-bg-hover); border-color: var(--accent-bg-hover); }
+
+    .btn-ghost {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border-color: var(--border-solid);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+
+    .btn-icon {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 6px;
+      border-radius: var(--radius-md);
+    }
+    .btn-icon:hover { background: var(--bg-card); color: var(--text-primary); }
+
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-sm svg { width: 12px; height: 12px; }
+
+    /* ===== Badges ===== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .badge-online { background: rgba(16,185,129,0.1); color: var(--success); border-color: rgba(16,185,129,0.2); }
+    .badge-online .badge-dot { background: var(--success); }
+    .badge-offline { background: rgba(255,255,255,0.05); color: var(--text-muted); border-color: var(--border-solid); }
+    .badge-offline .badge-dot { background: var(--text-disabled); }
+    .badge-error { background: rgba(239,68,68,0.1); color: var(--error); border-color: rgba(239,68,68,0.2); }
+    .badge-error .badge-dot { background: var(--error); }
+    .badge-p0 { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.2); }
+    .badge-p1 { background: rgba(245,158,11,0.1); color: #f59e0b; border-color: rgba(245,158,11,0.2); }
+    .badge-p2 { background: rgba(255,255,255,0.05); color: var(--text-muted); border-color: var(--border-solid); }
+
+    /* ===== Cards ===== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all var(--transition);
+    }
+    .card:hover { border-color: rgba(255,255,255,0.12); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.1px;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ===== Grid ===== */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    /* ===== Inputs ===== */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .input {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 9px 12px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all var(--transition);
+      width: 100%;
+    }
+
+    .input::placeholder { color: var(--text-disabled); }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(113,112,255,0.15); }
+
+    /* ===== Login Page ===== */
+    #login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 380px;
+      padding: 0 24px;
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .login-logo svg { width: 40px; height: 40px; }
+
+    .login-logo-text {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .login-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+    }
+
+    .login-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .login-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .login-form { display: flex; flex-direction: column; gap: 16px; }
+
+    .login-btn {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+
+    .login-hint {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      text-align: center;
+    }
+
+    /* ===== Stats Page ===== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .stat-change.up { color: var(--success); }
+    .stat-change.down { color: var(--error); }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .filter-pill {
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-solid);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      transition: all var(--transition);
+    }
+
+    .filter-pill:hover { border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+    .filter-pill.active { background: var(--accent-bg); color: #fff; border-color: var(--accent-bg); }
+
+    .filter-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-solid);
+      border-radius: var(--radius-md);
+      padding: 5px 10px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-secondary);
+      outline: none;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    .chart-area {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    .chart-placeholder {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      height: 280px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* Simple bar chart using CSS */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 180px;
+      width: 100%;
+      padding: 0 8px;
+    }
+
+    .bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bar {
+      width: 100%;
+      max-width: 36px;
+      border-radius: 4px 4px 0 0;
+      background: var(--accent-bg);
+      opacity: 0.8;
+      transition: opacity var(--transition);
+      position: relative;
+    }
+
+    .bar:hover { opacity: 1; }
+
+    .bar-label {
+      font-size: 10px;
+      color: var(--text-disabled);
+      text-align: center;
+    }
+
+    .bar-value {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .bar:hover .bar-value { opacity: 1; }
+
+    /* Pie chart */
+    .pie-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px 0;
+    }
+
+    .pie-legend { display: flex; flex-direction: column; gap: 8px; }
+
+    .pie-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .pie-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pie-legend-name { color: var(--text-secondary); flex: 1; }
+    .pie-legend-value { color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .pie-legend-pct { color: var(--text-disabled); font-size: 11px; margin-left: 4px; }
+
+    /* ===== Kanban Page ===== */
+    .kanban-filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .kanban-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .kanban-col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 4px 10px;
+    }
+
+    .kanban-col-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .kanban-col-count {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-disabled);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 1px 6px;
+    }
+
+    .kanban-col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .task-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .task-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .task-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .task-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-card-id {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-disabled);
+    }
+
+    .task-card-project {
+      font-size: 11px;
+      color: var(--text-disabled);
+      margin-left: auto;
+    }
+
+    /* ===== Agent Page ===== */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .agent-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all var(--transition);
+    }
+
+    .agent-card:hover { border-color: rgba(255,255,255,0.12); }
+
+    .agent-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .agent-info { display: flex; align-items: center; gap: 12px; }
+
+    .agent-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--accent-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .agent-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .agent-model {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .agent-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .agent-stat {
+      background: var(--bg-panel);
+      padding: 10px 12px;
+      text-align: center;
+    }
+
+    .agent-stat-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .agent-stat-label {
+      font-size: 10px;
+      color: var(--text-disabled);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .agent-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    /* ===== Section Divider ===== */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    /* ===== Divider ===== */
+    .divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 24px 0;
+    }
+
+    /* ===== Tweaks Panel ===== */
+    .tweaks-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 200;
+    }
+
+    .tweaks-toggle {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--transition);
+    }
+
+    .tweaks-toggle:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+    .tweaks-content {
+      position: absolute;
+      bottom: 44px;
+      right: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      width: 260px;
+      box-shadow: var(--shadow-lg);
+      display: none;
+    }
+
+    .tweaks-content.show { display: block; }
+
+    .tweaks-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .tweak-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .tweak-label { font-size: 12px; color: var(--text-secondary); }
+
+    .tweak-toggle {
+      width: 32px;
+      height: 18px;
+      border-radius: 9px;
+      background: var(--border-solid);
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: background var(--transition);
+    }
+
+    .tweak-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform var(--transition);
+    }
+
+    .tweak-toggle.on { background: var(--accent-bg); }
+    .tweak-toggle.on::after { transform: translateX(14px); }
+
+    /* ===== Color swatches for chart ===== */
+    .chart-colors { display: flex; gap: 8px; }
+
+    .color-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-solid); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-area { grid-template-columns: 1fr; }
+      .kanban-board { grid-template-columns: 1fr; }
+      .agent-grid { grid-template-columns: 1fr; }
+      .page-body { padding: 20px 16px; }
+      .page-header { padding: 20px 16px 16px; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .nav { padding: 0 16px; }
+    }
+
+    /* ===== Login Error State ===== */
+    .input.error { border-color: var(--error); }
+    .login-error-msg {
+      font-size: 12px;
+      color: var(--error);
+      display: none;
+    }
+    .input.error + .login-error-msg { display: block; }
+
+    /* ===== Skeleton loading ===== */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-elevated) 50%, var(--bg-surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-md);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ===== Notification toast ===== */
+    .toast {
+      position: fixed;
+      top: 68px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--bg-surface);
+      border: 1px solid var(--success-dim);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--success);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 300;
+      box-shadow: var(--shadow-lg);
+      animation: toastIn 0.2s ease forwards;
+    }
+
+    .toast.show { display: flex; }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    .toast svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ===== Toast ===== -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#10b981" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toast-msg">刷新成功</span>
+</div>
+
+<div class="app-shell">
+
+  <!-- ===== Navigation ===== -->
+  <nav class="nav" id="nav" style="display: none;">
+    <div class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#5e6ad2"/>
+        <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-logo-text">Hermes</span>
+    </div>
+    <div class="nav-links">
+      <a class="nav-link active" data-page="stats-page" onclick="navigate('stats-page')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="12" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
+        统计看板
+      </a>
+      <a class="nav-link" data-page="kanban-page" onclick="navigate('kanban-page')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="4" height="14" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="6" y="4" width="4" height="11" rx="1.5" fill="currentColor" opacity="0.7"/><rect x="11" y="7" width="4" height="8" rx="1.5" fill="currentColor"/></svg>
+        任务看板
+      </a>
+      <a class="nav-link" data-page="agent-page" onclick="navigate('agent-page')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" fill="currentColor"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Agent 状态
+      </a>
+    </div>
+    <div class="nav-right">
+      <button class="btn-icon" title="刷新" onclick="showToast('刷新成功')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">退出</button>
+    </div>
+  </nav>
+
+  <!-- ===== Login Page ===== -->
+  <div class="page active" id="login-page">
+    <div class="login-box">
+      <div class="login-logo">
+        <svg viewBox="0 0 40 40" fill="none">
+          <rect width="40" height="40" rx="10" fill="#5e6ad2"/>
+          <path d="M11 20l6 6 12-12" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="login-logo-text">Hermes</span>
+      </div>
+      <div class="login-card">
+        <div class="login-title">访问密钥</div>
+        <div class="login-desc">输入您的访问密钥以登录系统</div>
+        <form class="login-form" onsubmit="handleLogin(event)">
+          <div class="input-group">
+            <label class="input-label">访问密钥</label>
+            <input class="input" type="password" id="key-input" placeholder="请输入密钥..." autocomplete="off">
+            <div class="login-error-msg">密钥错误，请重试</div>
+          </div>
+          <button type="submit" class="btn btn-primary login-btn">登录</button>
+        </form>
+      </div>
+      <div class="login-hint">hermes-secret-key</div>
+    </div>
+  </div>
+
+  <!-- ===== Stats Page ===== -->
+  <div class="page" id="stats-page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Token 用量统计</div>
+        <div class="page-subtitle">实时监控 API 消耗与成本</div>
+      </div>
+      <div class="filter-row">
+        <button class="filter-pill active" onclick="setFilter(this, 'today')">今天</button>
+        <button class="filter-pill" onclick="setFilter(this, 'week')">本周</button>
+        <button class="filter-pill" onclick="setFilter(this, 'month')">本月</button>
+        <button class="filter-pill" onclick="setFilter(this, 'custom')">自定义</button>
+        <select class="filter-select">
+          <option>全部模型</option>
+          <option>gpt-4o</option>
+          <option>gpt-4o-mini</option>
+          <option>claude-3.5-sonnet</option>
+          <option>gemini-2.0-flash</option>
+        </select>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">总 Token</div>
+          <div class="stat-value">12.4M</div>
+          <div class="stat-change up">↑ 23.5% 较上周</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Prompt Token</div>
+          <div class="stat-value">7.8M</div>
+          <div class="stat-change up">↑ 18.2%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Completion Token</div>
+          <div class="stat-value">4.6M</div>
+          <div class="stat-change up">↑ 32.1%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">估算费用</div>
+          <div class="stat-value">$284.50</div>
+          <div class="stat-change up">↑ 21.3%</div>
+        </div>
+      </div>
+
+      <div class="chart-area">
+        <div class="chart-placeholder">
+          <div class="chart-header">
+            <span class="card-title">用量趋势</span>
+            <button class="btn btn-ghost btn-sm">
+              <svg viewBox="0 0 12 12" fill="none"><path d="M1 9V3h6M6 9l5-5M6 3v6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              导出
+            </button>
+          </div>
+          <div class="chart-body">
+            <div class="bar-chart">
+              <div class="bar-group">
+                <div class="bar" style="height: 45%"><span class="bar-value">45K</span></div>
+                <span class="bar-label">周一</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 60%"><span class="bar-value">60K</span></div>
+                <span class="bar-label">周二</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 35%"><span class="bar-value">35K</span></div>
+                <span class="bar-label">周三</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 80%"><span class="bar-value">80K</span></div>
+                <span class="bar-label">周四</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 55%"><span class="bar-value">55K</span></div>
+                <span class="bar-label">周五</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 25%"><span class="bar-value">25K</span></div>
+                <span class="bar-label">周六</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar" style="height: 40%"><span class="bar-value">40K</span></div>
+                <span class="bar-label">周日</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-placeholder">
+          <div class="chart-header">
+            <span class="card-title">按模型分布</span>
+          </div>
+          <div class="chart-body">
+            <div class="pie-chart">
+              <div class="pie-legend">
+                <div class="pie-legend-item">
+                  <div class="pie-dot" style="background: #7170ff"></div>
+                  <span class="pie-legend-name">gpt-4o</span>
+                  <span class="pie-legend-value">5.2M</span>
+                  <span class="pie-legend-pct">42%</span>
+                </div>
+                <div class="pie-legend-item">
+                  <div class="pie-dot" style="background: #10b981"></div>
+                  <span class="pie-legend-name">gpt-4o-mini</span>
+                  <span class="pie-legend-value">3.8M</span>
+                  <span class="pie-legend-pct">31%</span>
+                </div>
+                <div class="pie-legend-item">
+                  <div class="pie-dot" style="background: #f59e0b"></div>
+                  <span class="pie-legend-name">claude-3.5</span>
+                  <span class="pie-legend-value">2.4M</span>
+                  <span class="pie-legend-pct">19%</span>
+                </div>
+                <div class="pie-legend-item">
+                  <div class="pie-dot" style="background: #06b6d4"></div>
+                  <span class="pie-legend-name">gemini-2.0</span>
+                  <span class="pie-legend-value">1.0M</span>
+                  <span class="pie-legend-pct">8%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Kanban Page ===== -->
+  <div class="page" id="kanban-page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">任务看板</div>
+        <div class="page-subtitle">Hermes 任务状态一览</div>
+      </div>
+      <div class="kanban-filters">
+        <select class="filter-select">
+          <option>全部项目</option>
+          <option>hermes多功能看板</option>
+          <option>看板机制研究</option>
+        </select>
+        <select class="filter-select">
+          <option>全部负责人</option>
+          <option>紫灵</option>
+          <option>辛如音</option>
+          <option>银月</option>
+        </select>
+        <button class="btn btn-ghost btn-sm">
+          <svg viewBox="0 0 12 12" fill="none"><path d="M1 3h10M3 6h6M5 9h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          筛选
+        </button>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="kanban-board">
+
+        <!-- Backlog -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <div class="kanban-col-dot" style="background: var(--text-disabled)"></div>
+            <span class="kanban-col-title">Backlog</span>
+            <span class="kanban-col-count">4</span>
+          </div>
+          <div class="task-card">
+            <div class="task-card-title">[M1.3] 纯前端环境部署</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260506-020</span>
+              <span class="task-card-project">hermes多功能看板</span>
+            </div>
+          </div>
+          <div class="task-card">
+            <div class="task-card-title">[M2] token用量统计研究与落地</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260505-015</span>
+            </div>
+          </div>
+          <div class="task-card">
+            <div class="task-card-title">[M3] 任务看板前端界面</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260505-016</span>
+            </div>
+          </div>
+          <div class="task-card">
+            <div class="task-card-title">[P2] cron 看门狗：超时任务检测</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p2">P2</span>
+              <span class="task-card-id">TSK-20260504-011</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- In Progress -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <div class="kanban-col-dot" style="background: var(--accent)"></div>
+            <span class="kanban-col-title">In Progress</span>
+            <span class="kanban-col-count">1</span>
+          </div>
+          <div class="task-card" style="border-color: rgba(113,112,255,0.3)">
+            <div class="task-card-title">[M1.1] uniapp框架研究</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260506-018</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Done -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <div class="kanban-col-dot" style="background: var(--success)"></div>
+            <span class="kanban-col-title">Done</span>
+            <span class="kanban-col-count">2</span>
+          </div>
+          <div class="task-card" style="opacity: 0.6">
+            <div class="task-card-title">[M1] 选取前端框架</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260505-014</span>
+            </div>
+          </div>
+          <div class="task-card" style="opacity: 0.6">
+            <div class="task-card-title">[M1.2] 功能接口需求清单</div>
+            <div class="task-card-meta">
+              <span class="badge badge-p0">P0</span>
+              <span class="task-card-id">TSK-20260506-019</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Agent Page ===== -->
+  <div class="page" id="agent-page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Agent 运行状态</div>
+        <div class="page-subtitle">实时监控 Agent 活跃情况</div>
+      </div>
+      <div>
+        <button class="btn btn-ghost" onclick="showToast('已刷新')">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M11.5 7a4.5 4.5 0 11-1.1-2.9M11.5 1.5v3.5h-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          手动刷新
+        </button>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="agent-grid">
+
+        <!-- Agent 1 -->
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="agent-info">
+              <div class="agent-avatar" style="background: #5e6ad2">紫</div>
+              <div>
+                <div class="agent-name">紫灵</div>
+                <div class="agent-model">gpt-4o</div>
+              </div>
+            </div>
+            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
+          </div>
+          <div class="agent-stats">
+            <div class="agent-stat">
+              <div class="agent-stat-value">127</div>
+              <div class="agent-stat-label">总任务</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">8m</div>
+              <div class="agent-stat-label">运行时长</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">3</div>
+              <div class="agent-stat-label">并发</div>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+            <button class="btn btn-ghost btn-sm">日志</button>
+          </div>
+        </div>
+
+        <!-- Agent 2 -->
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="agent-info">
+              <div class="agent-avatar" style="background: #10b981">辛</div>
+              <div>
+                <div class="agent-name">辛如音</div>
+                <div class="agent-model">claude-3.5-sonnet</div>
+              </div>
+            </div>
+            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
+          </div>
+          <div class="agent-stats">
+            <div class="agent-stat">
+              <div class="agent-stat-value">84</div>
+              <div class="agent-stat-label">总任务</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">12m</div>
+              <div class="agent-stat-label">运行时长</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">2</div>
+              <div class="agent-stat-label">并发</div>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+            <button class="btn btn-ghost btn-sm">日志</button>
+          </div>
+        </div>
+
+        <!-- Agent 3 -->
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="agent-info">
+              <div class="agent-avatar" style="background: #f59e0b">银</div>
+              <div>
+                <div class="agent-name">银月</div>
+                <div class="agent-model">gemini-2.0-flash</div>
+              </div>
+            </div>
+            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
+          </div>
+          <div class="agent-stats">
+            <div class="agent-stat">
+              <div class="agent-stat-value">203</div>
+              <div class="agent-stat-label">总任务</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">5m</div>
+              <div class="agent-stat-label">运行时长</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">6</div>
+              <div class="agent-stat-label">并发</div>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+            <button class="btn btn-ghost btn-sm">日志</button>
+          </div>
+        </div>
+
+        <!-- Agent 4 -->
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="agent-info">
+              <div class="agent-avatar" style="background: #6b7280">文</div>
+              <div>
+                <div class="agent-name">文思月</div>
+                <div class="agent-model">—</div>
+              </div>
+            </div>
+            <span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>
+          </div>
+          <div class="agent-stats">
+            <div class="agent-stat">
+              <div class="agent-stat-value">42</div>
+              <div class="agent-stat-label">总任务</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">2h</div>
+              <div class="agent-stat-label">离线时长</div>
+            </div>
+            <div class="agent-stat">
+              <div class="agent-stat-value">0</div>
+              <div class="agent-stat-label">并发</div>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+            <button class="btn btn-ghost btn-sm">日志</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Tweaks Panel ===== -->
+<div class="tweaks-panel">
+  <button class="tweaks-toggle" onclick="toggleTweaks()">
+    <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><circle cx="7" cy="7" r="2" fill="currentColor"/><circle cx="7" cy="2" r="1.2" fill="currentColor"/><circle cx="7" cy="12" r="1.2" fill="currentColor"/><circle cx="2" cy="7" r="1.2" fill="currentColor"/><circle cx="12" cy="7" r="1.2" fill="currentColor"/></svg>
+    Tweaks
+  </button>
+  <div class="tweaks-content" id="tweaks">
+    <div class="tweaks-title">Preview Options</div>
+    <div class="tweak-item">
+      <span class="tweak-label">显示页眉</span>
+      <button class="tweak-toggle on" onclick="toggleTweak(this)"></button>
+    </div>
+    <div class="tweak-item">
+      <span class="tweak-label">骨架屏</span>
+      <button class="tweak-toggle" onclick="toggleTweak(this)"></button>
+    </div>
+    <div class="tweak-item">
+      <span class="tweak-label">紧凑模式</span>
+      <button class="tweak-toggle" onclick="toggleTweak(this)"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CORRECT_KEY = 'hermes-secret-key';
+  let isLoggedIn = false;
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const input = document.getElementById('key-input');
+    if (input.value === CORRECT_KEY) {
+      input.classList.remove('error');
+      isLoggedIn = true;
+      document.getElementById('nav').style.display = 'flex';
+      navigate('stats-page');
+    } else {
+      input.classList.add('error');
+    }
+  }
+
+  function logout() {
+    isLoggedIn = false;
+    document.getElementById('nav').style.display = 'none';
+    document.getElementById('key-input').value = '';
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('login-page').classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  }
+
+  function navigate(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
+  }
+
+  function setFilter(btn, period) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  function toggleTweaks() {
+    document.getElementById('tweaks').classList.toggle('show');
+  }
+
+  function toggleTweak(btn) {
+    btn.classList.toggle('on');
+  }
+
+  // Close tweaks on outside click
+  document.addEventListener('click', function(e) {
+    const panel = document.querySelector('.tweaks-panel');
+    if (!panel.contains(e.target)) {
+      document.getElementById('tweaks').classList.remove('show');
+    }
+  });
+</script>
+
+</body>
+</html>
