@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.1 | **日期**：2026-05-07 | **作者**：辛如音
+> **版本**：v1.2 | **日期**：2026-05-07 | **作者**：辛如音
 
 ---
 
@@ -183,6 +183,59 @@ backend/
 | 方法 | 路径 | 说明 |
 |:----:|:----|:------|
 | GET | `/api/agents` | 获取所有 Agent 运行状态 |
+
+**数据源**：
+
+| 数据 | 来源 | 说明 |
+|:----|:----|:-----|
+| 子进程 Profile 状态 | `~/.hermes/profiles/<id>/gateway_state.json` | PID、运行状态、活跃 Agent 数 |
+| 子进程默认模型 | `~/.hermes/profiles/<id>/config.yaml` | `model.default` |
+| 运行时长 | `ps -p <PID> -o etimes=` | 精确秒数，避免时间戳解析歧义 |
+| 主 Gateway | 固定 PID `195514` | 作为银月（`id=yinyue`）加入列表 |
+| 待办任务数 | SQLite `kanban.db` | 按负责人统计 backlog 数量 |
+
+**接口响应格式**：
+
+```
+GET /api/agents
+```
+
+```json
+{
+  "agents": [
+    {
+      "id": "yinyue",
+      "name": "银月",
+      "model": "—",
+      "pid": 195514,
+      "state": "running",
+      "uptime": "1d 6h 8m",
+      "uptimeSeconds": 108523,
+      "backlogCount": 0,
+      "isMain": true
+    },
+    {
+      "id": "xingruyin",
+      "name": "辛如音",
+      "model": "deepseek-sensenova",
+      "pid": 140909,
+      "state": "running",
+      "uptime": "1d 8h 30m",
+      "uplogSeconds": 117044,
+      "backlogCount": 8,
+      "isMain": false
+    }
+  ]
+}
+```
+
+**关键实现细节**：
+
+- `state` 字段仅区分 `running` / `stopped`，不对应 `gateway_state.json` 中的 `connected` / `fatal` / `retrying`（平台连接状态不在此接口返回）
+- 运行时长通过 `ps -p <PID> -o etimes=` 获取秒数，格式化函数 `formatUptime(seconds)` 输出 `"1d 6h 8m"` 格式
+- 主 Gateway（PID=195514）作为银月（`id=yinyue`）插入 profiles 数组首位，`isMain: true`
+- 待办数来自 SQLite `tasks` 表：`SELECT assignee, COUNT(*) FROM tasks WHERE status IN ('backlog', 'in-progress', 'in_progress') GROUP BY assignee`
+- profile 遍历：读取 `~/.hermes/profiles/` 目录，跳过 `shared` 子目录
 
 ---
 
@@ -475,6 +528,9 @@ module.exports = {
       PG_PASSWORD: 'litellm_local_pg',
       // SQLite
       KANBAN_DB_PATH: '/home/agentuser/.hermes/kanban.db',
+      // Hermes Agent
+      HERMES_PROFILES_PATH: '/home/agentuser/.hermes/profiles',
+      HERMES_MAIN_GATEWAY_PID: '195514',
     },
     watch: false,
     max_memory_restart: '256M',
@@ -561,6 +617,41 @@ export default defineConfig({
    c. BFF UPDATE tasks + saveDb() 持久化
    d. 失败时回滚：调用 fetchTasks() 重新拉取全量
 ```
+
+### 8.3 Agent 状态页面加载流程
+
+```
+1. 用户打开 Agent 状态页 agents.vue
+2. → store/agents.ts → refresh() → GET /api/agents
+3. BFF routes/agents.js 聚合操作：
+   a. 读取 ~/.hermes/profiles/ 目录下所有子目录（跳过 shared）
+   b. 每个子目录读取 gateway_state.json（获取 pid / state）
+   c. 每个子目录读取 config.yaml（获取 model.default）
+   d. 每个子进程 pid 执行 ps -p <PID> -o etimes= 获取运行时长（秒）
+   e. 主 Gateway（固定 PID 195514）作为银月插入 profiles 数组首位
+   f. 查询 kanban.db → getBacklogCounts() 统计各负责人待办数量
+4. 返回 { agents: [...] }，前端渲染 Agent 卡片网格
+5. 页面无自动轮询，用户手动点击刷新按钮重新拉取
+```
+
+**前端 Agent 卡片字段映射**：
+
+| BFF 字段 | 前端展示 | 说明 |
+|:---------|:--------|:-----|
+| `name` | Agent 名字 | 直接展示 |
+| `model` | 默认模型 | 从 config.yaml 读取 |
+| `state` | 运行状态徽章 | running=绿色/运行中，stopped=灰色/已停止 |
+| `uptime` | 运行时长 | 格式 `1d 8h 30m` |
+| `pid` | PID | 直接展示 |
+| `backlogCount` | 待办数 | 从 kanban.db 实时统计 |
+| `isMain` | 主 Gateway 标识 | true 时卡片有金色边框高亮 |
+
+**前端页面布局规范**：
+
+- 顶部仅保留标题 + 刷新按钮（无内嵌 tab 切换，依赖底部 tabBar 导航）
+- 网格布局：`grid-template-columns: repeat(2, 1fr)`，间距 10px
+- 移动端防溢出：所有页面 `overflow-x: hidden; touch-action: pan-y`
+- 刷新按钮样式：36px 圆形图标按钮，与任务看板页保持一致
 
 **负责人名称中英对照**（前端固定映射）：
 
