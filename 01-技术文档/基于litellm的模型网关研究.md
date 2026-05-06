@@ -122,44 +122,58 @@ routing_strategy:
 
 ---
 
-## 三、资源占用情况
+## 三、资源占用情况（实测）
 
-### 3.1 LiteLLM Proxy 资源需求
+### 3.1 核心结论速查
 
-LiteLLM Proxy 的资源占用取决于是否启用 Redis 以及请求量：
+| 部署模式 | LiteLLM RSS | PostgreSQL RSS | 总计 |
+|---------|------------|---------------|------|
+| **无 DB 纯路由模式** | ~5 MB | — | **~5 MB** |
+| **DB 模式（PostgreSQL）** | ~631 MB | ~139 MB | **~770 MB** |
 
-| 场景 | 内存 | CPU | 外部依赖 |
-|------|------|-----|---------|
-| **轻量级（< 100 req/min，无 Redis）** | **200–400 MB** | 0.5–1 核 | 无（SQLite 内置） |
-| **中等规模（100–1000 req/min，无 Redis）** | 400–800 MB | 1–2 核 | 无（内存追踪） |
-| **生产级别（> 1000 req/min，需 Redis）** | 500 MB–2 GB | 1–4 核 | Redis + PostgreSQL |
-
-> **重要修正**：LiteLLM Proxy 文档中提及 Redis 主要用于：
-> 1. **多实例协调**（2+ Proxy 进程共享状态）
-> 2. **Usage-Based Routing**（TPM 追踪跨实例共享）
-> 3. **Semantic Caching**（跨请求语义缓存）
+> ⚠️ DB 模式内存占用远高于无 DB 模式，主要来自：
+> - Prisma Query Engine（Rust 二进制，~300MB）
+> - Prisma Client（Python 绑定）
+> - Admin UI（Next.js SPA 前端资源）
+> - PostgreSQL 进程（含 data / WAL buffer）
 >
-> **对于单实例纯 Fallback 场景，以上三条均不适用，Redis 完全不需要。**
+> 稳定运行后内存不会持续增长。
 
-### 3.2 内存占用细化分析（单实例 Fallback 模式）
+### 3.2 轻量级（无 DB 模式）资源需求
 
 ```text
-启动时基础内存：约 150–250 MB（Python + LiteLLM + Uvicorn 进程）
+启动时基础内存：约 5 MB（Python + LiteLLM + Uvicorn 进程）
 并发请求内存：每个并发请求 + 10–30 MB 峰值（处理完成后释放）
 SQLite 存储：文件落在磁盘，不占进程内存
-Redis 连接：0（不启用 Redis，无此开销）
 
-常态内存消耗（无请求时）：约 200–350 MB ✅ < 500 MB 上限
+常态内存消耗（无请求时）：约 5 MB
 ```
 
-### 3.3 关键结论
+**实测数据（2026-05-06 无 DB 模式）：**
+```
+VmRSS:   5.2 MB   ← 实际物理内存（极低！）
+```
 
-| 配置状态 | 内存占用 | 是否满足 ≤500MB |
-|---------|---------|---------------|
-| 单实例 + 无 Redis + 关闭健康检查 + SQLite | **200–400 MB** | ✅ 满足 |
-| 单实例 + 无 Redis + 开启健康检查 | 250–450 MB | ✅ 基本满足（取决于检查频率） |
-| 单实例 + Redis（用于多实例协调） | 300–500 MB | ⚠️ 临界 |
-| 多实例 + Redis | 500 MB–2 GB | ❌ 不满足 |
+### 3.3 DB 模式（PostgreSQL）资源需求
+
+LiteLLM 在有 PostgreSQL 数据库的情况下会加载完整栈：
+
+| 组件 | 内存占用 | 说明 |
+|------|---------|------|
+| LiteLLM Proxy (Python) | ~631 MB RSS | 含 Prisma Engine + Admin UI |
+| PostgreSQL 16 | ~139 MB RSS | 含 data buffer + WAL buffer |
+| **总计** | **~770 MB RSS** | 稳定后不增长 |
+
+**启用 DB 模式的场景：**
+- 需要 spend tracking（用量统计 / Token 成本追踪）
+- 需要 Admin UI 可视化 Dashboard
+- 需要 Virtual Key 管理
+- 需要请求日志查询
+
+**不需要 DB 模式（纯路由）：**
+- 只需要 Fallback 功能，不需要统计
+- 内存敏感环境
+- 临时测试环境`
 
 ---
 
@@ -318,45 +332,54 @@ http://localhost:4000/ui
 | ④ 零额外调用次数消耗 | `background_health_checks: false` + `num_retries: 0` |
 | ⑤ 内存 ≤ 500MB | 单实例 + 无 Redis + SQLite + 关闭健康检查 |
 
-### 6.2 架构图
+### 6.2 架构图（当前实际部署 — 2026-05-06）
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      Hermes Agent                        │
-│                  (localhost:3000)                        │
-│                                                          │
-│   model:                                                 │
-│     provider: custom                                     │
-│     base_url: http://localhost:4000/v1   ──────────────┐│
-│     api_key: "litellm-proxy-key"                        │ │
-└─────────────────────────────────────────────────────────│ │
-                                                           │ │
-                                                           ▼ │
-                                          ┌────────────────────────┐
-                                          │   LiteLLM Proxy        │
-                                          │   (localhost:4000)     │
-                                          │                        │
-                                          │  ┌──────────────────┐  │
-                                          │  │ Fallback 链       │  │
-                                          │  │ minimax-main  (主) │  │
-                                          │  │       ↓           │  │
-                                          │  │ deepseek-backup    │  │
-                                          │  └──────────────────┘  │
-                                          │                        │
-                                          │  ┌──────────────────┐  │
-                                          │  │ SQLite 用量存储   │  │
-                                          │  └──────────────────┘  │
-                                          │                        │
-                                          │  Admin UI: :4000/ui    │
-                                          │  API: :4000/spend/*    │
-                                          └────────────────────────┘
-                                                           │
-                              ┌─────────────────────────────┼──────────────┐
-                              ▼                                                    ▼
-                    ┌─────────────────┐                                ┌─────────────────┐
-                    │  MiniMax API     │  ◄── 主模型（优先）            │  DeepSeek API   │
-                    │  (按 Token 计费) │                                │  (按 Token 计费) │
-                    └─────────────────┘                                └─────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                      Hermes Agent                         │
+│                    (localhost:3000)                       │
+│                                                           │
+│   model:                                                  │
+│     default: minimax-main                                 │
+│     provider: custom                                      │
+│     base_url: http://localhost:4000/v1   ──────────────┐ │
+│     api_key: "sk-litellm-proxy-key"                     │ │
+│                                                          │ │
+│   fallback_providers（Proxy 完全不可用时的最后保障）       │ │
+│     → minimax_domestic（直连）                            │ │
+│     → deepseek（直连）                                    │ │
+└──────────────────────────────────────────────────────────│ │
+                                                            ▼ │
+               ┌──────────────────────────────────────────────┘
+               │  LiteLLM Proxy (localhost:4000)
+               │
+               │  ┌──────────────────────────────────────┐
+               │  │       三模型 Fallback 链              │
+               │  │                                       │
+               │  │  ① minimax-main（主力：MiniMax-M2.7）  │
+               │  │          ↓ (失败/限速 → cooldown)     │
+               │  │  ② deepseek-sensenova（备选：sensenova) │
+               │  │          ↓ (失败/限速 → cooldown)     │
+               │  │  ③ deepseek-backup（兜底：官方渠道）    │
+               │  └──────────────────────────────────────┘
+               │
+               │  ┌──────────────────────────────────────┐
+               │  │  PostgreSQL → 用量统计 / Admin UI    │
+               │  │  62 张表，per-request 完整记录         │
+               │  └──────────────────────────────────────┘
+               │
+               │  Admin UI: http://IP:4000/ui
+               │  Spend API: http://IP:4000/spend/*
+               └──────────────────────┬──────────────────┘
+                                      │
+        ┌─────────────────────────────┼──────────────────────┐
+        ▼                             ▼                      ▼
+┌───────────────┐       ┌───────────────────┐     ┌──────────────────┐
+│  MiniMax API   │       │   DeepSeek API     │     │  DeepSeek API    │
+│  (MiniMax-M2.7)│       │  (sensenova 渠道)   │     │  (官方渠道，兜底)│
+│  OpenAI 格式   │       │  /v1/chat/complet.  │     │  api.deepseek.com│
+└───────────────┘       └───────────────────┘     └──────────────────┘
+       ↑ 主模型                   ↑ 备选                ↑ 兜底
 ```
 
 ### 6.3 前置条件检查
@@ -393,79 +416,76 @@ cd ~/litellm-gateway
 
 ```yaml
 # ~/litellm-gateway/litellm_config.yaml
+#
+# 当前实际运行配置（2026-05-06）
+# 三模型 Fallback + PostgreSQL DB 模式
 
 # ─────────────────────────────────────────────
 # 模型列表（按优先级从高到低排列）
-# 每个 model_name 即为一个独立的路由目标
 # ─────────────────────────────────────────────
 model_list:
-  # ── 主模型：MiniMax（优先级 1）─────────────────
-  - model_name: minimax-main          # 逻辑名，Hermes 调用时用这个
-    litellm_params:
-      model: minimax/MiniMax-M2.7     # LiteLLM 内置 provider 格式
-      api_key: os.environ/MINIMAX_API_KEY
-      api_base: https://api.minimaxi.com/v1  # 注意：要使用 OpenAI 兼容格式（/v1），不要用 /anthropic/v1。LiteLLM 会追加 /chat/completions
 
-  # ── 备模型：DeepSeek（优先级 2）─────────────────
-  - model_name: deepseek-backup       # 逻辑名，Fallback 目标
+  # ── 主模型：MiniMax-M2.7（优先级 1）─────────────────
+  # 主力模型，使用 OpenAI 兼容格式
+  # LiteLLM 会把 api_base 追加 /chat/completions
+  # ⚠️ 不要用 https://api.minimaxi.com/anthropic/v1（会双路径）
+  # ──
+  - model_name: minimax-main
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: https://api.minimaxi.com/v1   # ← OpenAI 格式
+
+  # ── 备模型 1：DeepSeek-sensenova（优先级 2）─────────────────
+  # 有额度限制（5小时窗口），设 rpm_config 保护
+  # ──
+  - model_name: deepseek-sensenova
     litellm_params:
       model: deepseek/deepseek-v4-flash
-      api_key: os.environ/DEEPSEEK_API_KEY
+      api_key: os.environ/DEEPSEEK_SENSENOVA_KEY
+      api_base: https://token.sensenova.cn/v1
+      rpm_config: 50
+
+  # ── 备模型 2：DeepSeek-官方（优先级 3，兜底）─────────────────
+  # 无额度限制
+  # ──
+  - model_name: deepseek-backup
+    litellm_params:
+      model: deepseek/deepseek-v4-flash
+      api_key: os.environ/DEEPSEEK_OFFICIAL_KEY
 
 # ─────────────────────────────────────────────
-# Fallback 链配置
-# minimax-main 失败后自动切换到 deepseek-backup
-# 不在原模型上重试（num_retries=0）
+# Fallback 链配置（双向互切）
+# minimax-main 失败 → deepseek-sensenova → deepseek-backup
 # ─────────────────────────────────────────────
 litellm_settings:
-  # 全局默认：不重试，失败直接走 Fallback 链
-  num_retries: 0                      # 关键：避免同一模型多次计费
+  num_retries: 0   # 不重试，直接走 fallback
 
-  # Fallback 链定义
   fallbacks:
-    - "minimax-main": ["deepseek-backup"]
+    - "minimax-main": ["deepseek-sensenova", "deepseek-backup"]
+    - "deepseek-sensenova": ["minimax-main", "deepseek-backup"]
+    - "deepseek-backup": ["minimax-main", "deepseek-sensenova"]
 
-# ─────────────────────────────────────────────
-# 路由器设置（轻量级配置）
-# 不启用任何需要 Redis 的功能
-# ─────────────────────────────────────────────
 router_settings:
-  # 不配置 routing_strategy = 不启用负载均衡，天然纯 Fallback 模式
-  # 不配置 redis_host = 不启用 Redis，单实例运行
+  cooldown_time: 600    # 10 分钟冷却（失败后等待多久才重新尝试主模型）
 
-  # 熔断冷却时间（秒）
-  # 主模型失败后，等待这么久才允许再次尝试
-  cooldown_time: 10
-
-  # 允许失败策略（可选，根据需要启用）
-  # allowed_fails_policy:
-  #   RateLimitErrorAllowedFails: 3       # 限速 3 次后进入 cooldown
-  #   TimeoutErrorAllowedFails: 2         # 超时 2 次后进入 cooldown
-
-# ─────────────────────────────────────────────
-# 健康检查配置（关键：关闭以避免额外 API 调用）
-# ─────────────────────────────────────────────
 general_settings:
-  # 完全关闭后台健康检查，消除所有额外调用损耗
-  background_health_checks: false      # 关键：不发送任何探测请求
-  enable_health_check_routing: false  # 不基于健康检查做路由
-  health_check_interval: 0             # 设为 0 等效关闭
+  # 关闭健康检查（零额外调用损耗）
+  background_health_checks: false
+  enable_health_check_routing: false
+  health_check_interval: 0
 
-  # 数据库：使用 SQLite（内置，无需安装）
-  database_url: "sqlite:///./litellm.db"
+  # PostgreSQL 数据库（用量统计 + Admin UI + Virtual Key）
+  database_url: "postgresql://user:password@localhost:5432/litellm"
 
-  # Admin UI：启用内置 Web 管理界面
+  # Admin UI
   admin_ui: true
 
-  # LiteLLM Master Key（用于管理 API，调费用数据）
-  # 生成方式：openssl rand -hex 32
-  litellm_master_key: "生成一个安全的随机密钥"
+  # Master Key（用于管理 API、调用量数据）
+  litellm_master_key: "sk-your-secure-master-key"
 
-# ─────────────────────────────────────────────
-# 虚拟 Key 配置（可选，用于对外开放 API）
-# ─────────────────────────────────────────────
-# key_management_settings:
-#   store_model_in_key: true            # 每个 Key 绑定可用模型列表
+port: 4000
+host: 0.0.0.0
 ```
 
 #### Step 4：配置环境变量
@@ -631,119 +651,196 @@ curl -s -H "Authorization: Bearer $KEY" \
 
 ---
 
-## 八、实际部署验证（2026-05-06）
+## 八、实际部署验证（2026-05-06，两阶段部署）
 
 > 调研人：银月
 > 部署环境：Ubuntu 24.04 LTS / Python 3.11 / 独立 venv
-> 部署时间：2026-05-06 凌晨
+> 服务器配置：4 核 8GB RAM / 公网 IP 134.175.163.213
 
-### 8.1 部署方式决策
+### 8.1 两阶段部署历程
 
-**Docker 方案**因服务器无法访问 Docker Hub（网络超时）被放弃，最终采用 **独立 venv + pip 安装** 方式运行 LiteLLM Proxy。
+| 阶段 | 时间 | 模式 | 说明 |
+|------|------|------|------|
+| 第一阶段 | 凌晨 | 无 DB 纯路由 | 快速验证，发现需要用量统计 |
+| 第二阶段 | 凌晨~午前 | PostgreSQL DB 模式 | 上线完整功能，修复 MiniMax 路由 |
+
+### 8.2 第一阶段：无 DB 纯路由模式
+
+**原因：** 服务器无法访问 Docker Hub，采用独立 venv + pip 安装。
 
 | 方案 | 状态 | 说明 |
 |------|------|------|
 | Docker 镜像 | ❌ | 服务器访问 `docker.io` 超时，国内无镜像缓存 |
-| 独立 venv + pip | ✅ | 成功运行，资源占用极低 |
+| 独立 venv + pip | ✅ | 成功运行，资源占用极低（5.2 MB RSS） |
 
-### 8.2 实际部署步骤
+**关键发现：** 不设置 `DATABASE_URL` 环境变量 → Prisma 完全跳过 → LiteLLM 自动降级到纯路由模式，完全不影响 Fallback 功能。
 
-**Step 1：创建独立 venv**
+### 8.3 第二阶段：DB 模式升级
+
+**升级原因：** 需要完整的 spend tracking、Admin UI、Virtual Key 管理。
+
+#### 8.3.1 PostgreSQL 安装
+
 ```bash
-mkdir -p ~/litellm-gateway
+sudo apt-get install -y postgresql postgresql-client
+sudo systemctl start postgresql
+
+# 创建数据库和用户
+sudo -u postgres createuser agentuser --superuser
+sudo -u postgres createdb litellm -O agentuser
+sudo -u postgres psql -c "ALTER USER agentuser PASSWORD 'litellm_local_pg';"
+```
+
+#### 8.3.2 Prisma 生成（pip 安装必需）
+
+```bash
 cd ~/litellm-gateway
-python -m venv venv
 source venv/bin/activate
-pip install 'litellm[proxy]' prisma
+
+# 复制 schema 到 Prisma 目录
+cp venv/lib/python3.11/site-packages/litellm/proxy/schema.prisma \
+   venv/lib/python3.11/site-packages/prisma/schema.prisma
+
+# 生成 Prisma Client
+prisma generate
 ```
 
-**Step 2：创建无数据库配置文件**
+**结果：** 62 张表自动创建，migration 完成 ✅
+
+#### 8.3.3 关键陷阱：systemd PATH
+
+LiteLLM 启动（`proxy_cli.py:887`）时执行 `subprocess.run(["prisma"])` 检查 Prisma 可用性。
+systemd 默认 PATH 不含 venv/bin，会被误判为 Prisma 不可用。
+
+**修复：** 在 systemd unit 中显式设置 PATH：
+```ini
+[Service]
+Environment="PATH=/home/agentuser/litellm-gateway/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+```
+
+### 8.4 MiniMax 路由修复记录
+
+#### 8.4.1 问题的本质
+
+MiniMax-M2.7 是推理模型，LiteLLM 内置的 `minimax/` 前缀使用 `MinimaxChatConfig`（继承 `OpenAIGPTConfig`），
+构造的 URL 为 `api_base + /chat/completions`。
+
+**错误配置（404 / 空内容）：**
+```yaml
+api_base: https://api.minimaxi.com/anthropic/v1
+# LiteLLM 追加后 → https://api.minimaxi.com/anthropic/v1/chat/completions ❌ 404
+```
+
+**正确配置（已修复 ✅）：**
+```yaml
+model: minimax/MiniMax-M2.7
+api_base: https://api.minimaxi.com/v1
+# LiteLLM 追加后 → https://api.minimaxi.com/v1/chat/completions ✅
+```
+
+#### 8.4.2 为什么 `minimax/` 前缀用 OpenAI 格式
+
+LiteLLM 的 `ProviderConfigManager`（`utils.py:8092`）定义：
+```python
+LlmProviders.MINIMAX: (lambda: litellm.MinimaxChatConfig(), False),
+```
+
+`MinimaxChatConfig` 继承 `OpenAIGPTConfig`，使用 OpenAI 兼容格式发送请求。
+请求体中的 `model: MiniMax-M2.7` 被 MiniMax API 正确识别。
+
+#### 8.4.3 响应包含推理过程
+
+MiniMax-M2.7 的响应中 `reasoning_content` 会被原样透传：
+```json
+{
+  "choices": [{
+    "message": {
+      "content": "你好！我是MiniMax-M2.7...",
+      "reasoning_content": "用户要求我用一句话做自我介绍...",
+      "provider_specific_fields": {
+        "reasoning_content": "用户要求... (完整推理过程)"
+      }
+    }
+  }]
+}
+```
+
+#### 8.4.4 对比：直连 vs Proxy 的 MiniMax 接入方式
+
+| 方式 | model 配置 | api_base | 请求格式 | 适用场景 |
+|------|-----------|----------|---------|---------|
+| **Hermes 直连** | `custom:minimax` | `https://api.minimaxi.com/anthropic` | Anthropic Messages | Fallback 场景，走 Hermes fallback_providers |
+| **LiteLLM Proxy** | `minimax/MiniMax-M2.7` | `https://api.minimaxi.com/v1` | OpenAI Chat | 主路由场景，走 Proxy fallback 链 |
+
+**两条路径互不干扰，可以共存。** Hermes 的 fallback_providers 直连走 Anthropic 格式，Proxy 走 OpenAI 格式。
+
+### 8.5 Virtual Key 管理
+
+每个接入 Proxy 的客户端（Hermes、其他工具）应使用独立的 Virtual Key：
+
 ```bash
-# 去掉 database_url，使用纯路由模式（无需 Prisma + PostgreSQL）
-# 配置文件：~/litellm-gateway/litellm_config_nodb.yaml
-```
-
-**Step 3：启动**
-```bash
-export LITELLM_MASTER_KEY="sk-litellm-masteR-kEy-2026"
-unset DATABASE_URL  # 关键：不设置 DATABASE_URL，跳过 Prisma 初始化
-litellm --config ~/litellm-gateway/litellm_config_nodb.yaml
-```
-
-> ⚠️ **关键发现**：设置 `DATABASE_URL` 环境变量会触发 Prisma 尝试连接数据库，而 Prisma 的 Rust 引擎存在 schema.prisma 硬编码路径问题（`/home/.../venv/lib/python3.11/site-packages/prisma/schema.prisma`），导致启动失败。**不设置 DATABASE_URL = 跳过 Prisma，LiteLLM 自动降级到纯路由模式**，完全不影响 Fallback 功能。
-
-### 8.3 实际运行数据
-
-**内存占用（实测）：**
-```
-VmRSS:   5.2 MB   ← 实际物理内存
-VmSize:  8.5 MB   ← 虚拟地址空间（不代表真实占用）
-```
-
-> 远低于文档预测的 200–400 MB，说明无数据库模式极其轻量。
-
-**API 调用测试结果（链路①：主链路通过 LiteLLM）：**
-```bash
-# ✅ deepseek-sensenova（通过 LiteLLM Proxy 转发）
-curl -s --max-time 30 http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
+# 创建 Key（绑定可用模型）
+curl -X POST http://localhost:4000/key/generate \
   -H "Content-Type: application/json" \
-  -d '{"model":"deepseek-sensenova","messages":[{"role":"user","content":"1+1=?"}],"max_tokens":10}'
-# 响应：{"model":"deepseek-sensenova","choices":[{"message":{"content":"1+1 equals 2."}}]}
-# Token: prompt=8, completion=39, total=47
+  -H "Authorization: Bearer <MASTER_KEY>" \
+  -d '{
+    "models": ["minimax-main", "deepseek-sensenova", "deepseek-backup"],
+    "metadata": {"user": "hermes-agent"},
+    "key": "sk-litellm-proxy-key"
+  }'
 
-# ✅ minimax-main（修复 api_base 后通过 LiteLLM 正常工作）
-curl -s --max-time 30 http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer sk-litellm-masteR-kEy-2026" \
+# 查看所有 Key
+curl -s http://localhost:4000/key/list \
+  -H "Authorization: Bearer <MASTER_KEY>"
+```
+
+### 8.6 实际运行数据
+
+**内存占用（2026-05-06 中午实测）：**
+
+| 组件 | 进程 | RSS | 备注 |
+|------|------|-----|------|
+| LiteLLM Proxy | Python + Prisma | ~631 MB | 含 Prisma Engine + Admin UI |
+| PostgreSQL 16 | postgres | ~139 MB | 含 data / WAL buffer |
+| **合计** | | **~770 MB** | 稳定后不增长 |
+
+**API 调用测试结果（链路①：MiniMax 通过 Proxy）：**
+
+```bash
+# ✅ MiniMax-M2.7 通过 Proxy（含 reasoning_content）
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer sk-litellm-proxy-key" \
   -H "Content-Type: application/json" \
-  -d '{"model":"minimax-main","messages":[{"role":"user","content":"你是谁？"}],"max_tokens":50}'
-# 响应：{"model":"minimax-main","choices":[{"message":{"content":"\n\n\n\n我是 MiniMax-M2.7"}}]}
-# 注意：api_base 必须设为 https://api.minimaxi.com/v1（不要用 /anime/v1），
-# 因为 LiteLLM 会追加 /chat/completions。
+  -d '{"model":"minimax-main","messages":[{"role":"user","content":"你好"}],"max_tokens":200}'
+# 响应：model="minimax-main", content="你好！我是MiniMax-M2.7..."
+# Token: prompt=47, completion=64, total=111 ✅
+
+# ✅ DeepSeek-sensenova 通过 Proxy
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer sk-litellm-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-sensenova","messages":[{"role":"user","content":"hi"}],"max_tokens":20}'
+# Token: prompt=8, completion=39, total=47 ✅
 ```
 
+**Admin UI：** `http://134.175.163.213:4000/ui` ✅ 正常显示 Dashboard
+**Spend Logs：** `http://localhost:4000/spend/logs` ✅ 请求完整记录
 
-**Swagger UI：** `http://localhost:4000/` ✅ 正常（返回 Swagger HTML）
-**Admin UI：** `http://localhost:4000/ui` ✅ 可访问
-
-### 8.4 最终结论
-
-LiteLLM Proxy **完全满足**银月的五项核心需求，且实际表现超出预期：
-
-- **零额外外部依赖**：单进程，无需 Redis / PostgreSQL / Docker
-- **零 API 调用额外损耗**：关闭健康检查 + 关闭重试后，每个失败请求最多 2 次调用
-- **内存占用极低**：实测 5.2 MB RSS（比预测的 200–400 MB 还轻量）
-- **开箱即用的用量观测**：Admin UI + REST API，无需额外搭建监控系统
-| **配置简单**：纯 YAML 配置，无需数据库初始化
-
-### 8.5 三层 Fallback 测试结果（2026-05-06 下午实测）
-
-在部署完成后，对三层 fallback 链路进行了系统性测试：
-
-| 测试 | 链路 | 方法 | 结果 |
-|------|------|------|------|
-| ① 主链路 | Hermes → LiteLLM Proxy → deepseek-sensenova | 正常对话 + 直接 API 调用 | ✅ 通过 |
-| ② LiteLLM 内部 Fallback | deepseek-sensenova → minimax-main → deepseek-backup | 临时改错 deepseek API Key，触发自动切换 | ✅ 通过（完整链条 A→B→C 均尝试） |
-| ③ Hermes fallback_providers | LiteLLM Proxy 宕机 → minimax_domestic（原生直连）→ deepseek（原生直连） | 停掉 LiteLLM Proxy 进程 | ✅ 通过（自动切回原生 API） |
-
-**测试②的详细过程**（验证了完整的 3 步 fallback 链）：
+### 8.7 三层 Fallback 架构（最终版）
 
 ```
-请求 deepseek-sensenova
-  → API Key 错误（故意改错）❌
-  → fallback 到 minimax-main
-    → api_base 路径问题导致 404 ❌ （已修复）
-    → fallback 到 deepseek-backup
-      → 响应成功 ✅
+主链路                         LiteLLM 内部 fallback             Hermes 原生 fallback
+Hermes → Proxy → [minimax-main → deepseek-sensenova → deepseek-backup] → [minimax直连 → deepseek直连]
+                    ↑ 主力模型         ↑ sensenova 额度           ↑ 官方渠道兜底         ↑ 最终保障
 ```
 
-**发现并解决的问题：**
+| 层 | 触发条件 | fallback 到 | 说明 |
+|----|---------|------------|------|
+| ① Proxy 内部 | MiniMax 失败/限速 | deepseek-sensenova | 自动切换，cooldown 10 分钟后重试 |
+| ② Proxy 内部 | sensenova 失败/额度耗尽 | deepseek-backup | 官方渠道，无额度限制 |
+| ③ Hermes 原生 | Proxy 宕机 | minimax_domestic 直连 | 系统级容灾 |
 
-- **问题**：`minimax-main` 的 `api_base` 原设为 `https://api.minimaxi.com/anthropic/v1`，但 LiteLLM 会在这个路径后追加 `/chat/completions`，导致最终 URL 为 `https://api.minimaxi.com/anthropic/v1/chat/completions`（404）
-- **修复**：改为 `https://api.minimaxi.com/v1`，LiteLLM 追加后为 `https://api.minimaxi.com/v1/chat/completions`，这是 MiniMax 的 OpenAI 兼容接口 ✅
-- **注意**：Hermes 通过 custom provider 原生直连 MiniMax 时（`fallback_providers` 场景），使用的是 Anthropic 兼容格式 `https://api.minimaxi.com/anthropic`，不受此影响
-
-### 8.6 后续扩展方向
+### 8.8 后续扩展方向
 
 当团队需求演进到以下阶段时，可按需升级：
 
