@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.4 | **日期**：2026-05-07 | **作者**：辛如音
+> **版本**：v1.5 | **日期**：2026-05-08 | **作者**：辛如音
 
 ---
 
@@ -118,13 +118,17 @@ backend/
 ├── config.js          # 数据库连接配置
 ├── routes/
 │   ├── tokens.js      # Token 用量相关接口
-│   ├── kanban.js      # 看板任务相关接口
+│   ├── kanban.js      # 看板任务相关接口（任务 CRUD + 看板统计）
 │   ├── agents.js      # Agent 状态接口
-│   └── auth.js        # 登录鉴权接口
+│   ├── auth.js        # 登录鉴权接口
+│   ├── milestone.js   # 里程碑接口（milestones + projects 三层级）
+│   └── repos.js       # Git 仓库状态接口
 ├── services/
 │   ├── litellmApi.js  # LiteLLM HTTP API 代理 + 模型健康状态后台同步
 │   ├── postgres.js    # PostgreSQL 查询服务
-│   └── sqlite.js      # SQLite 查询服务
+│   ├── sqlite.js      # SQLite 查询服务（任务 CRUD + 看板统计 + 待办统计）
+│   ├── milestone.js   # 里程碑数据聚合服务（项目-里程碑-任务三层级）
+│   └── gitRepo.js     # Git 仓库信息采集服务（每10分钟后台同步）
 ├── package.json
 └── ecosystem.config.js  # pm2 配置文件
 ```
@@ -161,6 +165,108 @@ backend/
 | 读取方式 | `getModelHealth()` 直接读内存，零等待 |
 | 无数据兜底 | 未从 `/health` 获取到的 model_group 返回 `unknown` |
 | 失败处理 | 同步失败只打 warn 日志，不影响接口正常返回 |
+
+### 2.5 里程碑数据聚合服务（milestone.js）
+
+**背景**：前端里程碑看板从原来的「里程碑→任务」两层结构升级为「项目→里程碑→任务」三层结构。每个项目下有多个里程碑，每个里程碑下有多个任务。
+
+**数据模型**：
+
+```
+projects[]
+├── name: string          # 项目名称（project_name）
+├── total: number         # 项目总任务数
+├── done: number          # 已完成任务数
+├── progress: number      # 完成百分比 0-100
+├── iconText: string      # 首字母大写
+├── iconBg: string        # 图标背景色
+└── milestones[]
+    ├── name: string      # 里程碑名称（如 "MS1 — P0 核心闭环"）
+    ├── total: number
+    ├── done: number
+    ├── progress: number
+    └── tasks[]
+        ├── id: string
+        ├── title: string
+        ├── status: string      # normalized: in_progress / done / backlog
+        ├── priority: string    # P0 / P1 / P2
+        ├── assignee: string    # 中文名
+        └── progress: number    # 0 / 50 / 100（任务级进度）
+```
+
+**数据源**：SQLite `kanban.db`，通过 `tasks.milestone_id` 与 `milestones` 表关联
+
+**架构流程**：
+
+```sql
+-- 核心查询：LEFT JOIN milestones 表，保留未关联任务
+SELECT t.id, t.title, t.status, t.priority, t.assignee,
+       t.project_name, t.milestone_id, t.milestone_sort,
+       m.name AS milestone_name, m.sort_order AS milestone_order
+FROM tasks t
+LEFT JOIN milestones m ON t.milestone_id = m.id
+WHERE t.project_name IS NOT NULL AND t.project_name != ''
+ORDER BY COALESCE(m.sort_order, 999), COALESCE(t.milestone_sort, 0),
+         CASE status ... END, priority, created_at DESC
+```
+
+**内存聚合逻辑**（`getMilestones()`）：
+
+```
+1. JOIN 查询获取原始行数据
+2. 按 project_name 分组 → projectMap
+3. 每个项目内按 milestone_id 分组 → milestoneMap
+4. 无 milestone_id 的任务归入「未分组」
+5. 计算每个里程碑的 total / done / progress
+6. 计算项目汇总 progress
+7. 按项目任务数降序排列
+```
+
+**负责人名称映射**（前端无需再传中文名）：
+
+```javascript
+const ASSIGNEE_ZH = {
+  xingruyin: '辛如音',
+  ziling: '紫灵',
+  yinyue: '银月',
+  siyue: '思月',
+}
+```
+
+### 2.6 Git 仓库状态服务（gitRepo.js）
+
+**背景**：项目有 4 个 Git 仓库（hermes-dashboard、hermes-agent、obsidian-vault、capability-platform），需要在前端展示仓库状态（分支、远程地址、最新 commit、脏文件数、同步状态等）。
+
+**架构决策**：后台定时采集（而非请求时实时执行 git 命令），避免每次请求都 fork 子进程执行 git 命令。
+
+**实现**：
+
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│ BFF 启动时                                                          │
+│ 1. 从 data/repos.json 加载上次缓存（兜底）                          │
+│ 2. 立即采集一次所有仓库状态                                         │
+│ 3. setInterval 每 10 分钟后台采集（SYNC_INTERVAL_MS = 600000）      │
+│                                                                      │
+│ 采集内容（collectRepoInfo）：                                        │
+│ - branch（git branch --show-current）                                │
+│ - remote（优先取非 /home/ 开头的远程 URL）                           │
+│ - lastCommit（git log -1: hash/message/author/timestamp）            │
+│ - dirtyFiles（git status --porcelain 行数）                          │
+│ - ahead/behind（git rev-list --count @{upstream}..HEAD）            │
+│ - syncStatus（四态: synced/unpushed/outdated/dirty）                 │
+│   → ahead>0=unpushed, behind>0=outdated, 均有=unpushed              │
+│   → dirty>0 且其他正常=dirty                                         │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+| 关键点 | 说明 |
+|:------|:-----|
+| 采集间隔 | 10 分钟 |
+| 持久化文件 | `backend/data/repos.json`，BFF 重启时从文件加载兜底 |
+| 读取方式 | `getRepos()` 直接读内存缓存，零等待 |
+| 失败处理 | 采集失败只打 warn 日志，保留上次缓存数据 |
+| 仓库配置 | 在 `config.js` 的 `repos` 数组中定义（id/name/desc/color/path） |
 
 ---
 
@@ -212,7 +318,118 @@ backend/
 
 > **状态值归一化**：Hermes CLI 写入状态为 `in-progress`（连字符），BFF 归一化为 `in_progress`（下划线）后返回前端；`completed` 也归一化为 `done`。统计接口 `stats` 会合并 `in_progress` + `in-progress` 和 `done` + `completed`。
 
-### 3.4 Agent 状态
+### 3.4 里程碑（三层级）
+
+| 方法 | 路径 | 说明 |
+|:----:|:----|:------|
+| GET | `/api/kanban/milestones` | 获取项目-里程碑-任务三层聚合数据 |
+| GET | `/api/kanban/milestones/:id` | 获取单个里程碑详情（含任务列表） |
+| GET | `/api/projects` | 获取项目列表（含进度统计） |
+
+**里程碑接口响应格式**（`GET /api/kanban/milestones`）：
+
+```json
+{
+  "total": 2,
+  "data": [
+    {
+      "name": "hermes多功能看板",
+      "total": 16,
+      "done": 9,
+      "progress": 56,
+      "iconText": "H",
+      "iconBg": "rgba(113,112,255,0.1)",
+      "milestones": [
+        {
+          "name": "M1 — 选取前端框架",
+          "total": 4,
+          "done": 4,
+          "progress": 100,
+          "tasks": [
+            {
+              "id": "TSK-20260505-014",
+              "title": "[M1] 选取前端框架",
+              "status": "done",
+              "priority": "P0",
+              "assignee": "紫灵",
+              "progress": 100
+            }
+          ]
+        },
+        {
+          "name": "未分组",
+          "total": 2,
+          "done": 1,
+          "progress": 50,
+          "tasks": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|:----:|:----:|:------|
+| `data[].name` | string | 项目名称（project_name） |
+| `data[].total` | number | 项目总任务数 |
+| `data[].done` | number | 已完成任务数 |
+| `data[].progress` | number | 完成百分比 0-100 |
+| `data[].iconText` | string | 图标首字母 |
+| `data[].iconBg` | string | 图标背景色 |
+| `data[].milestones[].name` | string | 里程碑名称（含 ID，如 `MS1 — P0 核心闭环`） |
+| `data[].milestones[].tasks[].progress` | number | 任务级进度：0（backlog）/ 50（in_progress）/ 100（done） |
+| 未分组 | — | 无 milestone_id 的任务归入 `name="未分组"` 的虚拟里程碑 |
+
+### 3.5 Git 仓库状态
+
+| 方法 | 路径 | 说明 |
+|:----:|:----|:------|
+| GET | `/api/repos` | 获取所有仓库状态（从内存缓存读取，零等待） |
+| GET | `/api/repos/:id` | 获取单个仓库详情 |
+
+**响应格式**（`GET /api/repos`）：
+
+```json
+{
+  "repos": [
+    {
+      "id": "hermes-dashboard",
+      "name": "hermes-dashboard",
+      "desc": "Hermes 多功能看板前端项目（uni-app + Vue 3）",
+      "color": "#7170ff",
+      "path": "/home/agentuser/public/hermes-dashboard",
+      "branch": "main",
+      "remote": "https://github.com/...",
+      "dirtyFiles": 0,
+      "ahead": 0,
+      "behind": 0,
+      "syncStatus": "synced",
+      "lastCommit": {
+        "hash": "a1b2c3d",
+        "message": "feat: ...",
+        "author": "ziling",
+        "timestamp": 1778000000
+      },
+      "fetchedAt": "2026-05-08T..."
+    }
+  ],
+  "total": 4,
+  "updatedAt": "2026-05-08T..."
+}
+```
+
+| 字段 | 类型 | 说明 |
+|:----:|:----:|:------|
+| `syncStatus` | string | 四态：`synced`（同步）/ `unpushed`（未推送）/ `outdated`（落后远程）/ `dirty`（有未提交更改） |
+| `dirtyFiles` | number | 未提交的更改文件数 |
+| `ahead` | number | 领先远程的 commit 数 |
+| `behind` | number | 落后远程的 commit 数 |
+| `lastCommit` | object | 最新 commit：`{ hash, message, author, timestamp }` |
+| `fetchedAt` | string | 该仓库的采集时间戳 |
+| `updatedAt` | string | 全量同步时间戳 |
+
+### 3.6 Agent 状态
 
 | 方法 | 路径 | 说明 |
 |:----:|:----|:------|
@@ -714,7 +931,31 @@ export default defineConfig({
    d. 失败时回滚：调用 fetchTasks() 重新拉取全量
 ```
 
-### 8.3 Agent 状态页面加载流程
+### 8.3 里程碑页面加载流程
+
+```
+1. 用户打开看板页 → 切换到里程碑 Tab
+2. kanban.vue → GET /api/kanban/milestones
+3. BFF milestone.js → 执行 LEFT JOIN 查询
+   a. tasks LEFT JOIN milestones ON t.milestone_id = m.id
+   b. 按 project_name 分组 → 按 milestone_id 分组
+   c. 计算各层级 total/done/progress
+   d. 无 milestone_id 任务归入「未分组」
+4. 返回三层结构：projects[{name, progress, milestones[{name, progress, tasks[]}]}]
+5. 前端渲染：项目卡片（宽进度条）→ 里程碑行（紧凑进度条）→ 任务明细
+```
+
+### 8.4 Git 仓库页面加载流程
+
+```
+1. 用户打开仓库信息页签 repo.vue
+2. GET /api/repos
+3. BFF repos.js → 直接从内存缓存 reposCache 读取（零等待）
+4. 返回 4 个仓库状态数据
+5. 前端渲染仓库卡片（分支名 / 同步状态 / 最后 commit / 脏文件数）
+```
+
+### 8.5 Agent 状态页面加载流程
 
 ```
 1. 用户打开 Agent 状态页 agents.vue
