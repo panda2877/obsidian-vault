@@ -930,102 +930,270 @@
       margin-left: auto;
     }
 
-    /* ===== Milestone Board (二期新增) ===== */
+    /* ===== Milestone Board (三期重构：项目-里程碑-任务三层) ===== */
     .milestone-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
     }
 
-    .milestone-item {
+    /* --- 项目层卡片 --- */
+    .project-card {
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 18px 20px;
       transition: all var(--transition);
+      overflow: hidden;
+    }
+    .project-card:hover {
+      border-color: rgba(255,255,255,0.12);
+    }
+    .project-card.active-project {
+      border-color: rgba(113,112,255,0.3);
+    }
+
+    .project-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--transition);
+    }
+    .project-header:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .project-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .project-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: rgba(113,112,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .project-icon svg {
+      width: 16px;
+      height: 16px;
+      color: var(--accent);
+    }
+
+    .project-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+
+    .project-header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .project-progress-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .project-bar-wrap {
+      width: 140px;
+      height: 6px;
+      background: var(--bg-panel);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .project-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .project-pct {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      min-width: 42px;
+      text-align: right;
+    }
+
+    .project-count {
+      font-size: 11px;
+      color: var(--text-disabled);
+      white-space: nowrap;
+    }
+
+    .project-toggle {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-disabled);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .project-toggle.open {
+      transform: rotate(180deg);
+    }
+    .project-toggle svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* --- 里程碑容器（在项目内部） --- */
+    .project-milestones {
+      display: none;
+      padding: 0 20px 18px;
+    }
+    .project-milestones.open {
+      display: block;
+    }
+
+    .milestone-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      transition: all var(--transition);
+      margin-bottom: 8px;
+    }
+    .milestone-item:last-child {
+      margin-bottom: 0;
     }
     .milestone-item:hover {
-      border-color: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.10);
+    }
+    .milestone-item.active-milestone {
+      border-color: rgba(113,112,255,0.25);
     }
 
     .milestone-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .milestone-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+      cursor: pointer;
+      user-select: none;
+    }
+    .milestone-header-left:hover .milestone-name {
+      color: var(--accent);
+    }
+
+    .milestone-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
     .milestone-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--text-primary);
+      transition: color var(--transition);
     }
 
-    .milestone-meta {
+    .milestone-header-right {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 12px;
-      color: var(--text-muted);
+      flex-shrink: 0;
     }
 
-    .milestone-progress {
+    .milestone-progress-compact {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-
     .milestone-bar-wrap {
-      flex: 1;
-      height: 6px;
-      background: var(--bg-panel);
-      border-radius: 3px;
+      width: 100px;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
       overflow: hidden;
-      max-width: 300px;
     }
-
     .milestone-bar-fill {
       height: 100%;
-      border-radius: 3px;
+      border-radius: 2px;
       transition: width 0.3s ease;
     }
 
     .milestone-pct {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       color: var(--text-primary);
       font-family: var(--font-mono);
-      min-width: 40px;
+      min-width: 36px;
       text-align: right;
     }
 
-    .milestone-detail-toggle {
+    .milestone-meta-text {
       font-size: 11px;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 2px 8px;
-      border-radius: var(--radius-sm);
-      transition: all var(--transition);
-      user-select: none;
+      color: var(--text-disabled);
+      white-space: nowrap;
     }
-    .milestone-detail-toggle:hover { color: var(--text-primary); background: var(--bg-card); }
 
-    .milestone-detail {
+    .milestone-arrow {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-disabled);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .milestone-arrow.open {
+      transform: rotate(180deg);
+    }
+    .milestone-arrow svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* --- 任务明细（在里程碑内部） --- */
+    .milestone-tasks {
       display: none;
-      margin-top: 14px;
-      padding-top: 14px;
+      margin-top: 12px;
+      padding-top: 10px;
       border-top: 1px solid var(--border-subtle);
     }
-    .milestone-detail.open { display: block; }
+    .milestone-tasks.open {
+      display: block;
+    }
 
     .milestone-task-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 0;
+      padding: 7px 0;
       font-size: 13px;
     }
-
     .milestone-task-row + .milestone-task-row {
       border-top: 1px solid var(--border-subtle);
     }
@@ -1040,10 +1208,18 @@
     .milestone-task-name {
       flex: 1;
       color: var(--text-secondary);
+      font-size: 12px;
     }
 
     .milestone-task-assignee {
       font-size: 11px;
+      color: var(--text-disabled);
+    }
+
+    .milestone-empty {
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
       color: var(--text-disabled);
     }
 
@@ -1750,182 +1926,312 @@
         </div>
       </div>
 
-      <!-- 子视图：里程碑看板（二期新增） -->
+      <!-- 子视图：里程碑看板（三期重构：项目-里程碑-任务三层结构） -->
       <div id="kanban-milestone-view" style="display:none;">
         <div class="milestone-list">
-          <div class="milestone-item">
-            <div class="milestone-header">
-              <div class="milestone-name">M1 — 选取前端框架</div>
-              <div class="milestone-meta">
-                <span>3/3 已完成</span>
-                <span class="milestone-pct" style="color:var(--success)">100%</span>
-                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+
+          <!-- ===== 项目卡片 1：hermes多功能看板 ===== -->
+          <div class="project-card active-project">
+            <div class="project-header" onclick="toggleProject(this)">
+              <div class="project-header-left">
+                <div class="project-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="4" height="14" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="6" y="4" width="4" height="11" rx="1.5" fill="currentColor" opacity="0.7"/><rect x="11" y="7" width="4" height="8" rx="1.5" fill="currentColor"/></svg>
+                </div>
+                <span class="project-name">hermes多功能看板</span>
+              </div>
+              <div class="project-header-right">
+                <div class="project-progress-info">
+                  <div class="project-bar-wrap">
+                    <div class="project-bar-fill" style="width:46%; background:var(--accent)"></div>
+                  </div>
+                  <span class="project-pct" style="color:var(--accent)">46%</span>
+                </div>
+                <span class="project-count">6/13 任务</span>
+                <div class="project-toggle open"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               </div>
             </div>
-            <div class="milestone-progress">
-              <div class="milestone-bar-wrap">
-                <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+            <div class="project-milestones open">
+
+              <!-- M1 — 已完成 -->
+              <div class="milestone-item">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--success)"></div>
+                    <span class="milestone-name">M1 — 选取前端框架</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--success)">100%</span>
+                    </div>
+                    <span class="milestone-meta-text">3/3</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M1] 选取前端框架</span>
+                    <span class="milestone-task-assignee">紫灵</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M1.1] uniapp框架研究</span>
+                    <span class="milestone-task-assignee">紫灵</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M1.2] 功能接口需求清单</span>
+                    <span class="milestone-task-assignee">紫灵</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="milestone-detail">
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M1] 选取前端框架</span>
-                <span class="milestone-task-assignee">紫灵</span>
-                <span class="badge badge-p0">P0</span>
+
+              <!-- M2 — 已完成 -->
+              <div class="milestone-item">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--success)"></div>
+                    <span class="milestone-name">M2 — Token 用量统计研究与落地</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--success)">100%</span>
+                    </div>
+                    <span class="milestone-meta-text">2/2</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M2] 研究 hermes token 用量统计方式并落地实现</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M2.2] agent运行情况前端界面</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                </div>
               </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M1.1] uniapp框架研究</span>
-                <span class="milestone-task-assignee">紫灵</span>
-                <span class="badge badge-p0">P0</span>
+
+              <!-- M3 — 进行中 -->
+              <div class="milestone-item active-milestone">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--accent)"></div>
+                    <span class="milestone-name">M3 — 任务看板与 Agent 状态</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:25%; background:var(--accent)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--accent)">25%</span>
+                    </div>
+                    <span class="milestone-meta-text">1/4</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M3.3] token趋势优化</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--accent)"></div>
+                    <span class="milestone-task-name">[M3.1] 统计模型状态（cooldown）</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M3.2] 记忆内容阅览</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M3.4] agent工作状态显示</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                </div>
               </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M1.2] 功能接口需求清单</span>
-                <span class="milestone-task-assignee">紫灵</span>
-                <span class="badge badge-p0">P0</span>
+
+              <!-- M4 — 二期页签扩展 -->
+              <div class="milestone-item">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--warning)"></div>
+                    <span class="milestone-name">M4 — 二期页签扩展</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:0%; background:var(--accent)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--text-muted)">0%</span>
+                    </div>
+                    <span class="milestone-meta-text">0/5</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--accent)"></div>
+                    <span class="milestone-task-name">[M4.1] 新建页签的前端设计</span>
+                    <span class="milestone-task-assignee">紫灵</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M4.2] git仓库信息页签</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M4.3] skill信息页签</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M4.4] cronjob及状态显示页签</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M3.5] 里程碑进度一览</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                </div>
               </div>
+
             </div>
           </div>
 
-          <div class="milestone-item">
-            <div class="milestone-header">
-              <div class="milestone-name">M2 — Token 用量统计研究与落地</div>
-              <div class="milestone-meta">
-                <span>2/2 已完成</span>
-                <span class="milestone-pct" style="color:var(--success)">100%</span>
-                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+          <!-- ===== 项目卡片 2：hermes-agent ===== -->
+          <div class="project-card">
+            <div class="project-header" onclick="toggleProject(this)">
+              <div class="project-header-left">
+                <div class="project-icon" style="background:rgba(16,185,129,0.1)">
+                  <svg viewBox="0 0 16 16" fill="none" style="color:var(--success)"><circle cx="8" cy="6" r="3" fill="currentColor"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </div>
+                <span class="project-name">hermes-agent</span>
+              </div>
+              <div class="project-header-right">
+                <div class="project-progress-info">
+                  <div class="project-bar-wrap">
+                    <div class="project-bar-fill" style="width:33%; background:var(--warning)"></div>
+                  </div>
+                  <span class="project-pct" style="color:var(--warning)">33%</span>
+                </div>
+                <span class="project-count">2/6 任务</span>
+                <div class="project-toggle"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               </div>
             </div>
-            <div class="milestone-progress">
-              <div class="milestone-bar-wrap">
-                <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+            <div class="project-milestones">
+
+              <!-- M5 — memory机制 -->
+              <div class="milestone-item">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--success)"></div>
+                    <span class="milestone-name">M5 — Memory 机制重构</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--success)">100%</span>
+                    </div>
+                    <span class="milestone-meta-text">2/2</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M5.1] memory 迁移到 profile 目录</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--success)"></div>
+                    <span class="milestone-task-name">[M5.2] checkpoints.db 优化</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p0">P0</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="milestone-detail">
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M2] 研究 hermes token 用量统计方式并落地实现</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
+
+              <!-- M6 — skill 热加载 -->
+              <div class="milestone-item">
+                <div class="milestone-header">
+                  <div class="milestone-header-left" onclick="toggleMilestoneTasks(this)">
+                    <div class="milestone-dot" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-name">M6 — Skill 热加载与版本管理</span>
+                  </div>
+                  <div class="milestone-header-right">
+                    <div class="milestone-progress-compact">
+                      <div class="milestone-bar-wrap">
+                        <div class="milestone-bar-fill" style="width:0%; background:var(--text-disabled)"></div>
+                      </div>
+                      <span class="milestone-pct" style="color:var(--text-disabled)">0%</span>
+                    </div>
+                    <span class="milestone-meta-text">0/4</span>
+                    <div class="milestone-arrow" onclick="toggleMilestoneArrow(this)"><svg viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                </div>
+                <div class="milestone-tasks">
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M6.1] skill 仓库自动拉取</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p1">P1</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M6.2] skill 版本比对</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p1">P1</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M6.3] 热更新通知机制</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p2">P2</span>
+                  </div>
+                  <div class="milestone-task-row">
+                    <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                    <span class="milestone-task-name">[M6.4] skill 回滚功能</span>
+                    <span class="milestone-task-assignee">辛如音</span>
+                    <span class="badge badge-p2">P2</span>
+                  </div>
+                </div>
               </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M2.2] agent运行情况前端界面</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
+
             </div>
           </div>
 
-          <div class="milestone-item">
-            <div class="milestone-header">
-              <div class="milestone-name">M3 — 任务看板与 Agent 状态</div>
-              <div class="milestone-meta">
-                <span>1/4 已完成</span>
-                <span class="milestone-pct" style="color:var(--accent)">25%</span>
-                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
-              </div>
-            </div>
-            <div class="milestone-progress">
-              <div class="milestone-bar-wrap">
-                <div class="milestone-bar-fill" style="width:25%; background:var(--accent)"></div>
-              </div>
-            </div>
-            <div class="milestone-detail">
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--success)"></div>
-                <span class="milestone-task-name">[M3.3] token趋势优化</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--accent)"></div>
-                <span class="milestone-task-name">[M3.1] 统计模型状态（cooldown）</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M3.2] 记忆内容阅览</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M3.4] agent工作状态显示</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="milestone-item" style="border-color: rgba(113,112,255,0.3)">
-            <div class="milestone-header">
-              <div class="milestone-name">M4 — 二期页签扩展（进行中）</div>
-              <div class="milestone-meta">
-                <span>0/4 已完成</span>
-                <span class="milestone-pct" style="color:var(--text-muted)">0%</span>
-                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
-              </div>
-            </div>
-            <div class="milestone-progress">
-              <div class="milestone-bar-wrap">
-                <div class="milestone-bar-fill" style="width:0%; background:var(--accent)"></div>
-              </div>
-            </div>
-            <div class="milestone-detail">
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--accent)"></div>
-                <span class="milestone-task-name">[M4.1] 新建页签的前端设计</span>
-                <span class="milestone-task-assignee">紫灵</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M4.2] git仓库信息页签</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M4.3] skill信息页签</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p1">P1</span>
-              </div>
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M4.4] cronjob及状态显示页签</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="milestone-item">
-            <div class="milestone-header">
-              <div class="milestone-name">M3.5 — 里程碑进度一览</div>
-              <div class="milestone-meta">
-                <span>0/1 待开始</span>
-                <span class="milestone-pct" style="color:var(--text-muted)">0%</span>
-                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
-              </div>
-            </div>
-            <div class="milestone-progress">
-              <div class="milestone-bar-wrap">
-                <div class="milestone-bar-fill" style="width:0%; background:var(--warning)"></div>
-              </div>
-            </div>
-            <div class="milestone-detail">
-              <div class="milestone-task-row">
-                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
-                <span class="milestone-task-name">[M3.5] 里程碑进度一览</span>
-                <span class="milestone-task-assignee">辛如音</span>
-                <span class="badge badge-p0">P0</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -2667,11 +2973,30 @@
     filterSkills(searchInput.value);
   }
 
-  // === 二期新增：里程碑展开/收起 ===
-  function toggleMilestone(el) {
-    const detail = el.closest('.milestone-item').querySelector('.milestone-detail');
-    detail.classList.toggle('open');
-    el.textContent = detail.classList.contains('open') ? '收起 ▲' : '展开 ▽';
+  // === 三期重构：三层交互逻辑（项目→里程碑→任务） ===
+  function toggleProject(el) {
+    const card = el.closest('.project-card');
+    const milestones = card.querySelector('.project-milestones');
+    const toggle = card.querySelector('.project-toggle');
+    const isOpen = milestones.classList.contains('open');
+    milestones.classList.toggle('open');
+    toggle.classList.toggle('open');
+  }
+
+  function toggleMilestoneTasks(el) {
+    const item = el.closest('.milestone-item');
+    const tasks = item.querySelector('.milestone-tasks');
+    const arrow = item.querySelector('.milestone-arrow');
+    tasks.classList.toggle('open');
+    arrow.classList.toggle('open');
+  }
+
+  function toggleMilestoneArrow(el) {
+    const item = el.closest('.milestone-item');
+    const tasks = item.querySelector('.milestone-tasks');
+    tasks.classList.toggle('open');
+    el.classList.toggle('open');
+    el.closest('.milestone-header')?.querySelector('.milestone-header-left');
   }
 </script>
 
