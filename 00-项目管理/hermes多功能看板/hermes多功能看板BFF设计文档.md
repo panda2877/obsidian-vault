@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.3 | **日期**：2026-05-07 | **作者**：辛如音
+> **版本**：v1.4 | **日期**：2026-05-07 | **作者**：辛如音
 
 ---
 
@@ -216,7 +216,7 @@ backend/
 
 | 方法 | 路径 | 说明 |
 |:----:|:----|:------|
-| GET | `/api/agents` | 获取所有 Agent 运行状态 |
+| GET | `/api/agents` | 获取所有 Agent 运行状态（含工作状态） |
 
 **数据源**：
 
@@ -226,7 +226,22 @@ backend/
 | 子进程默认模型 | `~/.hermes/profiles/<id>/config.yaml` | `model.default` |
 | 运行时长 | `ps -p <PID> -o etimes=` | 精确秒数，避免时间戳解析歧义 |
 | 主 Gateway | 固定 PID `195514` | 作为银月（`id=yinyue`）加入列表 |
+| Agent 工作状态 | `~/.hermes/state.db`（主）/ `<profile>/state.db`（子） | `sessions.ended_at` + `messages.timestamp` |
 | 待办任务数 | SQLite `kanban.db` | 按负责人统计 backlog 数量 |
+
+**工作状态判断逻辑**：
+
+```
+网关未运行 → disconnected（断线，灰色）
+网关运行中 → 查 state.db sessions 表：
+    ended_at IS NULL（有活跃 session）
+        → 查该 session 最后一条消息的 timestamp
+        → idleSecs = now - lastActive
+        → idleSecs < 10min → working（工作中，绿色）
+        → idleSecs >= 10min → idle（空闲，黄色）
+    ended_at IS NOT NULL（无活跃 session）→ idle
+state.db 读取失败 → null（网关未运行走 disconnected）
+```
 
 **接口响应格式**：
 
@@ -243,6 +258,7 @@ GET /api/agents
       "model": "—",
       "pid": 195514,
       "state": "running",
+      "workStatus": "idle",
       "uptime": "1d 6h 8m",
       "uptimeSeconds": 108523,
       "backlogCount": 0,
@@ -254,8 +270,9 @@ GET /api/agents
       "model": "deepseek-sensenova",
       "pid": 140909,
       "state": "running",
+      "workStatus": "working",
       "uptime": "1d 8h 30m",
-      "uplogSeconds": 117044,
+      "uptimeSeconds": 117044,
       "backlogCount": 8,
       "isMain": false
     }
@@ -263,9 +280,25 @@ GET /api/agents
 }
 ```
 
+| 字段 | 类型 | 说明 |
+|:----:|:----:|:------|
+| `id` | string | Agent 唯一标识（profile key） |
+| `name` | string | 中文显示名 |
+| `model` | string | 默认模型，`config.yaml` 中 `model.default` |
+| `pid` | number | 进程 PID |
+| `state` | string | Gateway 运行状态：`running` / `stopped`（仅内部使用判断断线） |
+| `workStatus` | string | Agent 工作状态：`working`（工作中）/`idle`（空闲）/`disconnected`（断线） |
+| `uptime` | string | Gateway 运行时长，格式 `1d 6h 8m` |
+| `uptimeSeconds` | number | Gateway 运行时长（秒），精确值 |
+| `backlogCount` | number | 该 Agent 待办任务数（从 kanban.db 统计） |
+| `isMain` | boolean | 是否为主 Gateway（银月） |
+
 **关键实现细节**：
 
-- `state` 字段仅区分 `running` / `stopped`，不对应 `gateway_state.json` 中的 `connected` / `fatal` / `retrying`（平台连接状态不在此接口返回）
+- `state` 字段仅用于判断断线（`running` = Gateway 在跑，`stopped` = Gateway 已停止），前端展示用 `workStatus`
+- `workStatus` 三值逻辑：网关未运行 → `disconnected`；网关运行中 + 有活跃 session + 最后消息 < 10 分钟 → `working`；否则 → `idle`
+- 活跃阈值常量：`IDLE_THRESHOLD_SECS = 600`（10 分钟），可按需调整
+- 状态数据源：主 Gateway 用 `~/.hermes/state.db`（对应主进程），子 Agent 用 `~/.hermes/profiles/<id>/state.db`（对应子进程）
 - 运行时长通过 `ps -p <PID> -o etimes=` 获取秒数，格式化函数 `formatUptime(seconds)` 输出 `"1d 6h 8m"` 格式
 - 主 Gateway（PID=195514）作为银月（`id=yinyue`）插入 profiles 数组首位，`isMain: true`
 - 待办数来自 SQLite `tasks` 表：`SELECT assignee, COUNT(*) FROM tasks WHERE status IN ('backlog', 'in-progress', 'in_progress') GROUP BY assignee`
@@ -692,9 +725,15 @@ export default defineConfig({
    c. 每个子目录读取 config.yaml（获取 model.default）
    d. 每个子进程 pid 执行 ps -p <PID> -o etimes= 获取运行时长（秒）
    e. 主 Gateway（固定 PID 195514）作为银月插入 profiles 数组首位
-   f. 查询 kanban.db → getBacklogCounts() 统计各负责人待办数量
-4. 返回 { agents: [...] }，前端渲染 Agent 卡片网格
-5. 页面无自动轮询，用户手动点击刷新按钮重新拉取
+   f. 每个 Agent 读取 state.db → getAgentWorkStatus()
+      - sessions 表找 ended_at IS NULL 的 session
+      - messages 表查该 session 最后一条消息的 timestamp
+      - 与当前时间比较，< 10min → working，≥ 10min → idle
+      - 无活跃 session → idle，网关未运行 → disconnected
+   g. 查询 kanban.db → getBacklogCounts() 统计各负责人待办数量
+4. 返回 { agents: [...] }，前端 store 做状态映射
+5. 前端 workStatus 三值展示：工作中（绿色）| 空闲（黄色）| 断线（灰色）
+6. 页面无自动轮询，用户手动点击刷新按钮重新拉取
 ```
 
 **前端 Agent 卡片字段映射**：
@@ -703,7 +742,7 @@ export default defineConfig({
 |:---------|:--------|:-----|
 | `name` | Agent 名字 | 直接展示 |
 | `model` | 默认模型 | 从 config.yaml 读取 |
-| `state` | 运行状态徽章 | running=绿色/运行中，stopped=灰色/已停止 |
+| `workStatus` | 状态徽章（三色） | working=绿色/工作中，idle=黄色/空闲，disconnected=灰色/断线 |
 | `uptime` | 运行时长 | 格式 `1d 8h 30m` |
 | `pid` | PID | 直接展示 |
 | `backlogCount` | 待办数 | 从 kanban.db 实时统计 |
