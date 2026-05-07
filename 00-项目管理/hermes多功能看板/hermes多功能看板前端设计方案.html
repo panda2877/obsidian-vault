@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hermes 多功能看板 — UI 设计原型 v2.0</title>
+  <title>Hermes 多功能看板 — UI 设计原型 v2.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     /* ===== Design Tokens — Linear-inspired dark theme ===== */
@@ -1135,6 +1135,170 @@
     }
     .cronjob-action-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
 
+    /* ===== Skill View (二期新增) ===== */
+    .skill-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .skill-search {
+      flex: 1;
+      max-width: 320px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px 8px 34px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all var(--transition);
+    }
+    .skill-search::placeholder { color: var(--text-disabled); }
+    .skill-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(113,112,255,0.15); }
+
+    .skill-search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+    }
+    .skill-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-disabled);
+      pointer-events: none;
+    }
+
+    .skill-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .skill-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      transition: all var(--transition);
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+    }
+    .skill-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .skill-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .skill-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      letter-spacing: -0.2px;
+    }
+
+    .skill-card-version {
+      font-size: 11px;
+      color: var(--text-disabled);
+      font-family: var(--font-mono);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1px 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .skill-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .skill-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .skill-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 500;
+      border: 1px solid var(--border-solid);
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      white-space: nowrap;
+    }
+
+    .skill-tag.category {
+      color: var(--accent);
+      border-color: rgba(113,112,255,0.2);
+      background: rgba(113,112,255,0.06);
+    }
+
+    .skill-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .skill-card-related {
+      font-size: 11px;
+      color: var(--text-disabled);
+    }
+
+    .skill-card-related span {
+      color: var(--text-muted);
+    }
+
+    .skill-detail-btn {
+      padding: 3px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-sans);
+    }
+    .skill-detail-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+    .skill-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
     /* ===== Tweaks Panel ===== */
     .tweaks-panel {
       position: fixed;
@@ -1233,6 +1397,7 @@
       .kanban-board { grid-template-columns: 1fr; }
       .agent-grid { grid-template-columns: 1fr; }
       .repo-grid { grid-template-columns: 1fr; }
+      .skill-grid { grid-template-columns: repeat(2, 1fr); }
       .page-body { padding: 20px 16px; }
       .page-header { padding: 20px 16px 16px; }
     }
@@ -1251,6 +1416,7 @@
       .kanban-board { grid-template-columns: 1fr; }
       .agent-grid { grid-template-columns: 1fr; }
       .repo-grid { grid-template-columns: 1fr; }
+      .skill-grid { grid-template-columns: 1fr; }
       .page-body { padding: 16px; }
       .page-header {
         padding: 16px;
@@ -1773,10 +1939,11 @@
           <div class="page-title">Agent</div>
           <div class="page-subtitle">Agent 运行状态与定时任务</div>
         </div>
-        <!-- 二级切换栏：状态 | CronJob -->
+        <!-- 二级切换栏：状态 | CronJob | Skill -->
         <div class="sub-tab-bar">
           <span class="sub-tab active" data-agent-view="status" onclick="switchAgentView('status', this)">状态</span>
           <span class="sub-tab" data-agent-view="cronjob" onclick="switchAgentView('cronjob', this)">CronJob</span>
+          <span class="sub-tab" data-agent-view="skill" onclick="switchAgentView('skill', this)">Skill</span>
         </div>
         <button class="btn-icon" style="margin-left:auto;" title="刷新" onclick="showToast('刷新成功')">
           <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1947,6 +2114,243 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 子视图：Skill 展示（二期新增） -->
+      <div id="agent-skill-view" style="display:none;">
+        <div class="skill-toolbar">
+          <div class="skill-search-wrap">
+            <svg class="skill-search-icon" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input class="skill-search" type="text" placeholder="搜索 skill 名称..." oninput="filterSkills(this.value)">
+          </div>
+          <select class="filter-select" onchange="filterSkillsByCategory(this.value)">
+            <option value="">全部分类</option>
+            <option value="creative">creative</option>
+            <option value="devops">devops</option>
+            <option value="github">github</option>
+            <option value="mlops">mlops</option>
+            <option value="productivity">productivity</option>
+            <option value="research">research</option>
+            <option value="software-development">software-development</option>
+          </select>
+          <span class="skill-count">共 <strong>12</strong> 个 skill</span>
+        </div>
+        <div class="skill-grid" id="skill-grid">
+          <!-- Skill 卡片 1 -->
+          <div class="skill-card" data-skill-name="kanban-orchestrator" data-skill-category="devops">
+            <div class="skill-card-header">
+              <div class="skill-card-name">kanban-orchestrator</div>
+              <span class="skill-card-version">v2.0.0</span>
+            </div>
+            <div class="skill-card-desc">Decomposition playbook + specialist-roster conventions for an orchestrator profile routing work through Kanban.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">devops</span>
+              <span class="skill-tag">kanban</span>
+              <span class="skill-tag">multi-agent</span>
+              <span class="skill-tag">orchestration</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>kanban-worker</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 2 -->
+          <div class="skill-card" data-skill-name="kanban-worker" data-skill-category="devops">
+            <div class="skill-card-header">
+              <div class="skill-card-name">kanban-worker</div>
+              <span class="skill-card-version">v2.0.0</span>
+            </div>
+            <div class="skill-card-desc">Pitfalls, examples, and edge cases for Hermes Kanban worker execution.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">devops</span>
+              <span class="skill-tag">kanban</span>
+              <span class="skill-tag">worker</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>kanban-orchestrator</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 3 -->
+          <div class="skill-card" data-skill-name="requirements-expert-ziling" data-skill-category="creative">
+            <div class="skill-card-header">
+              <div class="skill-card-name">requirements-expert-ziling</div>
+              <span class="skill-card-version">v2.0.0</span>
+            </div>
+            <div class="skill-card-desc">紫灵 — 需求/创意专家。负责接收想法、与老大讨论可行性、优化为需求方案。</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">creative</span>
+              <span class="skill-tag">requirements</span>
+              <span class="skill-tag">design</span>
+              <span class="skill-tag">ziling</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>ziling-diagram</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 4 -->
+          <div class="skill-card" data-skill-name="claude-design" data-skill-category="creative">
+            <div class="skill-card-header">
+              <div class="skill-card-name">claude-design</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">Design one-off HTML artifacts — landing pages, prototypes, decks, component labs, motion studies.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">creative</span>
+              <span class="skill-tag">design</span>
+              <span class="skill-tag">html</span>
+              <span class="skill-tag">prototype</span>
+              <span class="skill-tag">ux</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>popular-web-designs, design-md</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 5 -->
+          <div class="skill-card" data-skill-name="github-pr-workflow" data-skill-category="github">
+            <div class="skill-card-header">
+              <div class="skill-card-name">github-pr-workflow</div>
+              <span class="skill-card-version">v2.0.0</span>
+            </div>
+            <div class="skill-card-desc">GitHub PR lifecycle — branch, commit, open, CI, merge. Full workflow automation.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">github</span>
+              <span class="skill-tag">pr</span>
+              <span class="skill-tag">git</span>
+              <span class="skill-tag">ci/cd</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>github-code-review</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 6 -->
+          <div class="skill-card" data-skill-name="test-driven-development" data-skill-category="software-development">
+            <div class="skill-card-header">
+              <div class="skill-card-name">test-driven-development</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">TDD workflow — enforce RED-GREEN-REFACTOR cycle, tests before code.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">software-development</span>
+              <span class="skill-tag">tdd</span>
+              <span class="skill-tag">testing</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">—</div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 7 -->
+          <div class="skill-card" data-skill-name="llama-cpp" data-skill-category="mlops">
+            <div class="skill-card-header">
+              <div class="skill-card-name">llama-cpp</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">Local GGUF inference with llama.cpp — model discovery, quantization, and serving.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">mlops</span>
+              <span class="skill-tag">llm</span>
+              <span class="skill-tag">gguf</span>
+              <span class="skill-tag">inference</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>huggingface-hub</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 8 -->
+          <div class="skill-card" data-skill-name="youtube-content" data-skill-category="research">
+            <div class="skill-card-header">
+              <div class="skill-card-name">youtube-content</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">YouTube transcripts to summaries, threads, and blog posts.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">research</span>
+              <span class="skill-tag">youtube</span>
+              <span class="skill-tag">transcript</span>
+              <span class="skill-tag">summary</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">—</div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 9 -->
+          <div class="skill-card" data-skill-name="obsidian" data-skill-category="productivity">
+            <div class="skill-card-header">
+              <div class="skill-card-name">obsidian</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">Read, search, and create notes in the Obsidian vault.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">productivity</span>
+              <span class="skill-tag">notes</span>
+              <span class="skill-tag">obsidian</span>
+              <span class="skill-tag">knowledge</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">—</div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 10 -->
+          <div class="skill-card" data-skill-name="github-code-review" data-skill-category="github">
+            <div class="skill-card-header">
+              <div class="skill-card-name">github-code-review</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">Review PRs — diffs, inline comments via gh or REST API.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">github</span>
+              <span class="skill-tag">code-review</span>
+              <span class="skill-tag">pr</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>github-pr-workflow</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 11 -->
+          <div class="skill-card" data-skill-name="axolotl" data-skill-category="mlops">
+            <div class="skill-card-header">
+              <div class="skill-card-name">axolotl</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">YAML LLM fine-tuning — LoRA, DPO, GRPO. Declarative config-driven training.</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">mlops</span>
+              <span class="skill-tag">fine-tuning</span>
+              <span class="skill-tag">lora</span>
+              <span class="skill-tag">dpo</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>unsloth, trl</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
+          <!-- Skill 卡片 12 -->
+          <div class="skill-card" data-skill-name="ziling-diagram" data-skill-category="creative">
+            <div class="skill-card-header">
+              <div class="skill-card-name">ziling-diagram</div>
+              <span class="skill-card-version">v1.0.0</span>
+            </div>
+            <div class="skill-card-desc">紫灵专属的图表/流程图设计工具，快速生成架构图与交互图。</div>
+            <div class="skill-card-tags">
+              <span class="skill-tag category">creative</span>
+              <span class="skill-tag">diagram</span>
+              <span class="skill-tag">architecture</span>
+              <span class="skill-tag">ziling</span>
+            </div>
+            <div class="skill-card-footer">
+              <div class="skill-card-related">关联: <span>requirements-expert-ziling</span></div>
+              <button class="skill-detail-btn">查看详情</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2238,6 +2642,29 @@
     el.classList.add('active');
     document.getElementById('agent-status-view').style.display = view === 'status' ? 'block' : 'none';
     document.getElementById('agent-cronjob-view').style.display = view === 'cronjob' ? 'block' : 'none';
+    document.getElementById('agent-skill-view').style.display = view === 'skill' ? 'block' : 'none';
+  }
+
+  // === 二期新增：Skill 搜索与筛选 ===
+  let currentCategoryFilter = '';
+
+  function filterSkills(query) {
+    const cards = document.querySelectorAll('#skill-grid .skill-card');
+    let visible = 0;
+    cards.forEach(card => {
+      const name = card.getAttribute('data-skill-name') || '';
+      const matchesSearch = !query || name.toLowerCase().includes(query.toLowerCase());
+      const matchesCategory = !currentCategoryFilter || card.getAttribute('data-skill-category') === currentCategoryFilter;
+      card.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+      if (matchesSearch && matchesCategory) visible++;
+    });
+    document.querySelector('.skill-count').innerHTML = `共 <strong>${visible}</strong> 个 skill`;
+  }
+
+  function filterSkillsByCategory(category) {
+    currentCategoryFilter = category;
+    const searchInput = document.querySelector('.skill-search');
+    filterSkills(searchInput.value);
   }
 
   // === 二期新增：里程碑展开/收起 ===

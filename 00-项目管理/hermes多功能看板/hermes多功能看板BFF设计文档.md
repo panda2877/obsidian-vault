@@ -236,11 +236,11 @@ backend/
 网关运行中 → 查 state.db sessions 表：
     ended_at IS NULL（有活跃 session）
         → 查该 session 最后一条消息的 timestamp
+        → 无 messages 记录 → idle（新建 session 暂无活动）
         → idleSecs = now - lastActive
-        → idleSecs < 10min → working（工作中，绿色）
-        → idleSecs >= 10min → idle（空闲，黄色）
+        → idleSecs < 20min → working（工作中，绿色）
+        → idleSecs >= 20min → idle（空闲，黄色）
     ended_at IS NOT NULL（无活跃 session）→ idle
-state.db 读取失败 → null（网关未运行走 disconnected）
 ```
 
 **接口响应格式**：
@@ -296,8 +296,8 @@ GET /api/agents
 **关键实现细节**：
 
 - `state` 字段仅用于判断断线（`running` = Gateway 在跑，`stopped` = Gateway 已停止），前端展示用 `workStatus`
-- `workStatus` 三值逻辑：网关未运行 → `disconnected`；网关运行中 + 有活跃 session + 最后消息 < 10 分钟 → `working`；否则 → `idle`
-- 活跃阈值常量：`IDLE_THRESHOLD_SECS = 600`（10 分钟），可按需调整
+- `workStatus` 三值逻辑：网关未运行 → `disconnected`；网关运行中 + 有活跃 session + 有 messages 记录 + 最后消息 < 20 分钟 → `working`；否则 → `idle`（包括 messages 无记录的新 session）
+- 活跃阈值常量：`IDLE_THRESHOLD_SECS = 1200`（20 分钟），可按需调整
 - 状态数据源：主 Gateway 用 `~/.hermes/state.db`（对应主进程），子 Agent 用 `~/.hermes/profiles/<id>/state.db`（对应子进程）
 - 运行时长通过 `ps -p <PID> -o etimes=` 获取秒数，格式化函数 `formatUptime(seconds)` 输出 `"1d 6h 8m"` 格式
 - 主 Gateway（PID=195514）作为银月（`id=yinyue`）插入 profiles 数组首位，`isMain: true`
