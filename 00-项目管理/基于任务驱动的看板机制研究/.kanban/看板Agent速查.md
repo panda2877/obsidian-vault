@@ -13,6 +13,7 @@
 | 认领任务 / 查待办 | `kanban-todo` skill |
 | 完成任务（强制 sync.py） | `kanban` skill → references/kanban-agent-guide.md § 完成 |
 | 查任务详情 | `kanban` skill → references/kanban-agent-guide.md § 详情 |
+| 里程碑操作 | `kanban` skill → references/kanban-agent-guide.md § 里程碑操作 |
 | 同步进度总览 | `kanban-sync` skill |
 | 判断要不要建看板 | `kanban-orchestrator` skill |
 | 高频踩坑 | `/home/agentuser/.hermes/skills/kanban/references/kanban-pitfalls.md` |
@@ -55,6 +56,12 @@ find /home/agentuser/obsidian-vault/00-项目管理 -name "{task_id}.md" 2>/dev/
 # checkpoints
 SELECT phase, summary, blockers, next_steps, created_at
 FROM checkpoints WHERE task_id='{id}' ORDER BY created_at
+
+# 里程碑查询（新）
+SELECT m.id, m.name, COUNT(t.id) AS task_count
+FROM milestones m LEFT JOIN tasks t ON t.milestone_id = m.id
+WHERE m.project_name = 'hermes多功能看板'
+GROUP BY m.id ORDER BY m.sort_order;
 ```
 
 ---
