@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.2 | **日期**：2026-05-07 | **作者**：辛如音
+> **版本**：v1.3 | **日期**：2026-05-07 | **作者**：辛如音
 
 ---
 
@@ -108,6 +108,7 @@ npm run build:mp-toutiao   # 头条小程序
 | SQLite 驱动 | **sql.js** | 纯 JS（WASM），无需本地编译 |
 | 进程管理 | **pm2** | 生产级守护 + 自动重启 |
 | 开发热重载 | **nodemon** | 开发模式自动重启 |
+| 健康状态持久化 | **本地 JSON 文件** | `backend/data/model-health.json`，BFF 启动自动加载 |
 
 ### 2.3 目录结构
 
@@ -121,12 +122,45 @@ backend/
 │   ├── agents.js      # Agent 状态接口
 │   └── auth.js        # 登录鉴权接口
 ├── services/
-│   ├── litellmApi.js  # LiteLLM HTTP API 代理
+│   ├── litellmApi.js  # LiteLLM HTTP API 代理 + 模型健康状态后台同步
 │   ├── postgres.js    # PostgreSQL 查询服务
 │   └── sqlite.js      # SQLite 查询服务
 ├── package.json
 └── ecosystem.config.js  # pm2 配置文件
 ```
+
+### 2.4 模型健康状态同步机制
+
+**背景**：LiteLLM 的 cooldown 机制是内存态，不持久化到数据库。`/health` 接口直接标注了 `healthy` / `unhealthy`（unhealthy 会附带错误信息如 429），是最准的实时状态获取方式。
+
+**架构决策**：后台定时同步（而非请求时实时获取），避免每次切换维度都等 `/health` 返回的 ~2 秒延迟。
+
+**实现**（`backend/services/litellmApi.js`）：
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  BFF 启动时                                                        │
+│  1. 从 data/model-health.json 加载上次缓存（兜底）                  │
+│  2. 立即拉取一次 LiteLLM /health + /model/info 更新缓存            │
+│  3. setInterval 每 2 分钟后台同步                                   │
+│                                                                    │
+│  同步流程：                                                         │
+│  GET /health       → 获取 healthy_endpoints / unhealthy_endpoints   │
+│  GET /model/info   → 获取 model_id → model_group 映射              │
+│                      ↓                                              │
+│  合并构建 { model_group: 'healthy' | 'unhealthy' }                 │
+│  写入内存 modelHealthStatus                                         │
+│  持久化到 data/model-health.json                                    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+| 关键点 | 说明 |
+|:------|:-----|
+| 同步间隔 | 2 分钟（`SYNC_INTERVAL_MS = 120_000`） |
+| 持久化文件 | `backend/data/model-health.json`，BFF 重启时从文件加载兜底 |
+| 读取方式 | `getModelHealth()` 直接读内存，零等待 |
+| 无数据兜底 | 未从 `/health` 获取到的 model_group 返回 `unknown` |
+| 失败处理 | 同步失败只打 warn 日志，不影响接口正常返回 |
 
 ---
 
@@ -143,7 +177,7 @@ backend/
 
 | 方法 | 路径 | 说明 |
 |:----:|:----|:------|
-| GET | `/api/tokens/summary` | 总览（总 Token / 总花费 / 按模型分布） |
+| GET | `/api/tokens/summary` | 总览（总 Token / 总花费 / 按模型分布 + 健康状态） |
 | GET | `/api/tokens/daily` | 按日聚合趋势 |
 | GET | `/api/tokens/trend` | 按粒度聚合趋势（支持 `2hour` / `daily` / `weekly`） |
 | GET | `/api/tokens/by-model` | 按模型分组统计 |
@@ -322,6 +356,28 @@ WHERE "startTime" >= $1::timestamp
 GROUP BY model_group
 ORDER BY tokens DESC;
 ```
+
+**响应格式**（BFF 层合并模型健康状态）：
+
+```json
+{
+  "totalTokens": 12345678,
+  "totalPromptTokens": 5000000,
+  "totalCompletionTokens": 7345678,
+  "totalCost": 12.34,
+  "modelDistribution": [
+    { "model": "deepseek-sensenova", "tokens": 5000000, "status": "healthy" },
+    { "model": "minimax-main",      "tokens": 4000000, "status": "healthy" },
+    { "model": "mimo",              "tokens": 2000000, "status": "healthy" },
+    { "model": "deepseek-backup",   "tokens": 1234567, "status": "healthy" }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|:----:|:----:|:------|
+| `status` | string | 模型健康状态：`healthy` / `unhealthy` / `unknown`（未从 `/health` 获取到数据的模型为 `unknown`） |
+| 健康状态来源 | — | BFF 后台每 2 分钟定时同步 LiteLLM `/health` 接口，存入内存 + 本地文件持久化；前端请求时直接从内存读取，零等待 |
 
 #### 4.3.4 模型列表（`/api/tokens/models`）
 
@@ -550,16 +606,20 @@ module.exports = {
 // vite.config.ts 补充
 export default defineConfig({
   server: {
+    host: '0.0.0.0',    // 允许公网访问（Vite 默认仅监听 localhost）
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        // 禁止 rewrite 路径（否则所有 /api 开头的 BFF 路由返回 404）
       },
     },
   },
   // ... 现有配置
 });
 ```
+
+> **说明**：Vite 默认仅监听 `127.0.0.1`，添加 `host: '0.0.0.0'` 后可通过服务器公网 IP 直接访问前端页面。`/api` 代理不 rewrite 路径，确保 BFF 路由正常工作。
 
 ---
 
@@ -583,11 +643,14 @@ export default defineConfig({
 1. 用户打开统计页 dashboard.vue
 2. → store/stats.ts → fetchSummary() + fetchDaily()
 3. uni.request('/api/tokens/summary?startDate=...&endDate=...')
-4. BFF /tokens/summary: 查 PostgreSQL LiteLLM_SpendLogs，返回
-   { totalTokens, totalPromptTokens, totalCompletionTokens, totalCost, modelDistribution[] }
+4. BFF /tokens/summary:
+   a. 查 PostgreSQL LiteLLM_SpendLogs，获取聚合指标 + 模型分布
+   b. 从内存读取模型健康状态（后台每2分钟同步一次，零等待）
+   c. 合并返回：{ totalTokens, ..., modelDistribution: [{ model, tokens, status }] }
 5. uni.request('/api/tokens/daily?startDate=...&endDate=...')
 6. BFF /tokens/daily: 按日聚合，返回 { startDate, endDate, data: [{ date, promptTokens, completionTokens, tokens, cost }] }
 7. 前端 uCharts 渲染柱状图 + 饼图
+8. 饼图图例每个模型名后显示状态标识：🟢正常 / 🔴异常 / ⚪未知
 ```
 
 ### 8.2 看板页面加载流程（已实现）
