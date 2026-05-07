@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hermes 多功能看板 — UI 设计原型</title>
+  <title>Hermes 多功能看板 — UI 设计原型 v2.0</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     /* ===== Design Tokens — Linear-inspired dark theme ===== */
@@ -90,10 +90,7 @@
       flex-shrink: 0;
     }
 
-    .nav-logo svg {
-      width: 28px;
-      height: 28px;
-    }
+    .nav-logo svg { width: 28px; height: 28px; }
 
     .nav-logo-text {
       font-size: 14px;
@@ -124,16 +121,8 @@
       user-select: none;
     }
 
-    .nav-link:hover {
-      color: var(--text-primary);
-      background: var(--bg-card);
-    }
-
-    .nav-link.active {
-      color: var(--text-primary);
-      background: rgba(255,255,255,0.06);
-    }
-
+    .nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-link.active { color: var(--text-primary); background: rgba(255,255,255,0.06); }
     .nav-link svg { width: 16px; height: 16px; opacity: 0.7; }
     .nav-link.active svg { opacity: 1; }
 
@@ -174,11 +163,7 @@
       user-select: none;
     }
 
-    .tab-link svg {
-      width: 20px;
-      height: 20px;
-    }
-
+    .tab-link svg { width: 20px; height: 20px; }
     .tab-link:hover { color: var(--text-secondary); }
     .tab-link.active { color: var(--accent); }
     .tab-link.active svg { opacity: 1; }
@@ -223,6 +208,35 @@
       padding: 28px 32px;
     }
 
+    /* ===== Sub-Tab Switch Bar (二期新增) ===== */
+    .sub-tab-bar {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 3px;
+    }
+
+    .sub-tab {
+      padding: 5px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .sub-tab:hover { color: var(--text-secondary); }
+    .sub-tab.active {
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
     /* ===== Buttons ===== */
     .btn {
       display: inline-flex;
@@ -243,27 +257,13 @@
 
     .btn svg { width: 14px; height: 14px; }
 
-    .btn-primary {
-      background: var(--accent-bg);
-      color: #fff;
-      border-color: var(--accent-bg);
-    }
+    .btn-primary { background: var(--accent-bg); color: #fff; border-color: var(--accent-bg); }
     .btn-primary:hover { background: var(--accent-bg-hover); border-color: var(--accent-bg-hover); }
 
-    .btn-ghost {
-      background: var(--bg-card);
-      color: var(--text-secondary);
-      border-color: var(--border-solid);
-    }
+    .btn-ghost { background: var(--bg-card); color: var(--text-secondary); border-color: var(--border-solid); }
     .btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
 
-    .btn-icon {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid transparent;
-      padding: 6px;
-      border-radius: var(--radius-md);
-    }
+    .btn-icon { background: transparent; color: var(--text-muted); border: 1px solid transparent; padding: 6px; border-radius: var(--radius-md); }
     .btn-icon:hover { background: var(--bg-card); color: var(--text-primary); }
 
     .btn-sm { padding: 5px 10px; font-size: 12px; }
@@ -282,11 +282,7 @@
       white-space: nowrap;
     }
 
-    .badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
 
     .badge-online { background: rgba(16,185,129,0.1); color: var(--success); border-color: rgba(16,185,129,0.2); }
     .badge-online .badge-dot { background: var(--success); }
@@ -322,11 +318,7 @@
       letter-spacing: -0.1px;
     }
 
-    .card-subtitle {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
+    .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
 
     /* ===== Grid ===== */
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -371,9 +363,7 @@
       flex: 1;
     }
 
-    #login-page.active {
-      display: flex;
-    }
+    #login-page.active { display: flex; }
 
     .login-box {
       width: 100%;
@@ -452,6 +442,13 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 18px 20px;
+      transition: all var(--transition);
+      cursor: default;
+    }
+    .stat-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     .stat-label {
@@ -742,7 +739,11 @@
       transition: all var(--transition);
     }
 
-    .agent-card:hover { border-color: rgba(255,255,255,0.12); }
+    .agent-card:hover {
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
 
     .agent-card-header {
       display: flex;
@@ -835,6 +836,305 @@
       margin: 24px 0;
     }
 
+    /* ===== Repo Page (二期新增) ===== */
+    .repo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .repo-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all var(--transition);
+    }
+    .repo-card:hover {
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .repo-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .repo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .repo-icon svg { width: 18px; height: 18px; }
+
+    .repo-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .repo-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    .repo-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .repo-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .repo-meta-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .repo-branch {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-disabled);
+      font-family: var(--font-mono);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px 8px;
+    }
+
+    .repo-updated {
+      font-size: 11px;
+      color: var(--text-disabled);
+      margin-left: auto;
+    }
+
+    /* ===== Milestone Board (二期新增) ===== */
+    .milestone-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .milestone-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      transition: all var(--transition);
+    }
+    .milestone-item:hover {
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .milestone-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .milestone-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .milestone-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .milestone-progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .milestone-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-panel);
+      border-radius: 3px;
+      overflow: hidden;
+      max-width: 300px;
+    }
+
+    .milestone-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .milestone-pct {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .milestone-detail-toggle {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .milestone-detail-toggle:hover { color: var(--text-primary); background: var(--bg-card); }
+
+    .milestone-detail {
+      display: none;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .milestone-detail.open { display: block; }
+
+    .milestone-task-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+    }
+
+    .milestone-task-row + .milestone-task-row {
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .milestone-task-status {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .milestone-task-name {
+      flex: 1;
+      color: var(--text-secondary);
+    }
+
+    .milestone-task-assignee {
+      font-size: 11px;
+      color: var(--text-disabled);
+    }
+
+    /* ===== CronJob List (二期新增) ===== */
+    .cronjob-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    .cronjob-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cronjob-table td {
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .cronjob-row {
+      transition: all var(--transition);
+    }
+    .cronjob-row:hover td {
+      background: var(--bg-card);
+    }
+
+    .cronjob-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .cronjob-schedule {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      display: inline-block;
+    }
+
+    .cronjob-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+
+    .cronjob-status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .cronjob-status.active { color: var(--success); }
+    .cronjob-status.active .dot { background: var(--success); }
+    .cronjob-status.error { color: var(--error); }
+    .cronjob-status.error .dot { background: var(--error); }
+    .cronjob-status.paused { color: var(--warning); }
+    .cronjob-status.paused .dot { background: var(--warning); }
+
+    .cronjob-last-run {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .cronjob-action-btn {
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-sans);
+    }
+    .cronjob-action-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
     /* ===== Tweaks Panel ===== */
     .tweaks-panel {
       position: fixed;
@@ -920,15 +1220,6 @@
     .tweak-toggle.on { background: var(--accent-bg); }
     .tweak-toggle.on::after { transform: translateX(14px); }
 
-    /* ===== Color swatches for chart ===== */
-    .chart-colors { display: flex; gap: 8px; }
-
-    .color-swatch {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-    }
-
     /* ===== Scrollbar ===== */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -941,6 +1232,7 @@
       .chart-area { grid-template-columns: 1fr; }
       .kanban-board { grid-template-columns: 1fr; }
       .agent-grid { grid-template-columns: 1fr; }
+      .repo-grid { grid-template-columns: 1fr; }
       .page-body { padding: 20px 16px; }
       .page-header { padding: 20px 16px 16px; }
     }
@@ -958,6 +1250,7 @@
       .chart-area { grid-template-columns: 1fr; }
       .kanban-board { grid-template-columns: 1fr; }
       .agent-grid { grid-template-columns: 1fr; }
+      .repo-grid { grid-template-columns: 1fr; }
       .page-body { padding: 16px; }
       .page-header {
         padding: 16px;
@@ -1022,6 +1315,13 @@
     }
 
     .toast svg { width: 14px; height: 14px; }
+
+    /* ===== Page Transition Animation (样式优化建议) ===== */
+    .page-enter-active, .page-leave-active {
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .page-enter-from { opacity: 0; transform: translateY(8px); }
+    .page-leave-to { opacity: 0; transform: translateY(-4px); }
   </style>
 </head>
 <body>
@@ -1044,7 +1344,7 @@
       <span class="nav-logo-text">Hermes</span>
     </div>
     <div class="nav-links">
-      <a class="nav-link active" data-page="stats-page" onclick="navigate('stats-page')">
+      <a class="nav-link" data-page="stats-page" onclick="navigate('stats-page')">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="12" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
         统计看板
       </a>
@@ -1054,7 +1354,11 @@
       </a>
       <a class="nav-link" data-page="agent-page" onclick="navigate('agent-page')">
         <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" fill="currentColor"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Agent 状态
+        Agent
+      </a>
+      <a class="nav-link" data-page="repo-page" onclick="navigate('repo-page')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        仓库
       </a>
     </div>
     <div class="nav-right">
@@ -1098,7 +1402,7 @@
         <div class="page-title">Token 用量统计</div>
         <div class="page-subtitle">实时监控 API 消耗与成本</div>
       </div>
-      <div class="filter-row">
+      <div class="filter-row" style="margin-bottom:0">
         <button class="filter-pill active" onclick="setFilter(this, 'today')">今天</button>
         <button class="filter-pill" onclick="setFilter(this, 'week')">本周</button>
         <button class="filter-pill" onclick="setFilter(this, 'month')">本月</button>
@@ -1110,6 +1414,9 @@
           <option>claude-3.5-sonnet</option>
           <option>gemini-2.0-flash</option>
         </select>
+        <button class="btn-icon" title="刷新" onclick="showToast('刷新成功')">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </div>
     <div class="page-body">
@@ -1147,34 +1454,13 @@
           </div>
           <div class="chart-body">
             <div class="bar-chart">
-              <div class="bar-group">
-                <div class="bar" style="height: 45%"><span class="bar-value">45K</span></div>
-                <span class="bar-label">周一</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 60%"><span class="bar-value">60K</span></div>
-                <span class="bar-label">周二</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 35%"><span class="bar-value">35K</span></div>
-                <span class="bar-label">周三</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 80%"><span class="bar-value">80K</span></div>
-                <span class="bar-label">周四</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 55%"><span class="bar-value">55K</span></div>
-                <span class="bar-label">周五</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 25%"><span class="bar-value">25K</span></div>
-                <span class="bar-label">周六</span>
-              </div>
-              <div class="bar-group">
-                <div class="bar" style="height: 40%"><span class="bar-value">40K</span></div>
-                <span class="bar-label">周日</span>
-              </div>
+              <div class="bar-group"><div class="bar" style="height: 45%"><span class="bar-value">45K</span></div><span class="bar-label">周一</span></div>
+              <div class="bar-group"><div class="bar" style="height: 60%"><span class="bar-value">60K</span></div><span class="bar-label">周二</span></div>
+              <div class="bar-group"><div class="bar" style="height: 35%"><span class="bar-value">35K</span></div><span class="bar-label">周三</span></div>
+              <div class="bar-group"><div class="bar" style="height: 80%"><span class="bar-value">80K</span></div><span class="bar-label">周四</span></div>
+              <div class="bar-group"><div class="bar" style="height: 55%"><span class="bar-value">55K</span></div><span class="bar-label">周五</span></div>
+              <div class="bar-group"><div class="bar" style="height: 25%"><span class="bar-value">25K</span></div><span class="bar-label">周六</span></div>
+              <div class="bar-group"><div class="bar" style="height: 40%"><span class="bar-value">40K</span></div><span class="bar-label">周日</span></div>
             </div>
           </div>
         </div>
@@ -1186,30 +1472,10 @@
           <div class="chart-body">
             <div class="pie-chart">
               <div class="pie-legend">
-                <div class="pie-legend-item">
-                  <div class="pie-dot" style="background: #7170ff"></div>
-                  <span class="pie-legend-name">gpt-4o</span>
-                  <span class="pie-legend-value">5.2M</span>
-                  <span class="pie-legend-pct">42%</span>
-                </div>
-                <div class="pie-legend-item">
-                  <div class="pie-dot" style="background: #10b981"></div>
-                  <span class="pie-legend-name">gpt-4o-mini</span>
-                  <span class="pie-legend-value">3.8M</span>
-                  <span class="pie-legend-pct">31%</span>
-                </div>
-                <div class="pie-legend-item">
-                  <div class="pie-dot" style="background: #f59e0b"></div>
-                  <span class="pie-legend-name">claude-3.5</span>
-                  <span class="pie-legend-value">2.4M</span>
-                  <span class="pie-legend-pct">19%</span>
-                </div>
-                <div class="pie-legend-item">
-                  <div class="pie-dot" style="background: #06b6d4"></div>
-                  <span class="pie-legend-name">gemini-2.0</span>
-                  <span class="pie-legend-value">1.0M</span>
-                  <span class="pie-legend-pct">8%</span>
-                </div>
+                <div class="pie-legend-item"><div class="pie-dot" style="background: #7170ff"></div><span class="pie-legend-name">gpt-4o</span><span class="pie-legend-value">5.2M</span><span class="pie-legend-pct">42%</span></div>
+                <div class="pie-legend-item"><div class="pie-dot" style="background: #10b981"></div><span class="pie-legend-name">gpt-4o-mini</span><span class="pie-legend-value">3.8M</span><span class="pie-legend-pct">31%</span></div>
+                <div class="pie-legend-item"><div class="pie-dot" style="background: #f59e0b"></div><span class="pie-legend-name">claude-3.5</span><span class="pie-legend-value">2.4M</span><span class="pie-legend-pct">19%</span></div>
+                <div class="pie-legend-item"><div class="pie-dot" style="background: #06b6d4"></div><span class="pie-legend-name">gemini-2.0</span><span class="pie-legend-value">1.0M</span><span class="pie-legend-pct">8%</span></div>
               </div>
             </div>
           </div>
@@ -1218,264 +1484,655 @@
     </div>
   </div>
 
-  <!-- ===== Kanban Page ===== -->
+  <!-- ===== Kanban Page (二期新增：子视图切换) ===== -->
   <div class="page" id="kanban-page">
     <div class="page-header">
-      <div>
-        <div class="page-title">任务看板</div>
-        <div class="page-subtitle">Hermes 任务状态一览</div>
-      </div>
-      <div class="kanban-filters">
-        <select class="filter-select">
-          <option>全部项目</option>
-          <option>hermes多功能看板</option>
-          <option>看板机制研究</option>
-        </select>
-        <select class="filter-select">
-          <option>全部负责人</option>
-          <option>紫灵</option>
-          <option>辛如音</option>
-          <option>银月</option>
-        </select>
-        <button class="btn btn-ghost btn-sm">
-          <svg viewBox="0 0 12 12" fill="none"><path d="M1 3h10M3 6h6M5 9h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          筛选
+      <div style="display:flex; align-items:center; gap:16px; width:100%;">
+        <div>
+          <div class="page-title">任务看板</div>
+          <div class="page-subtitle">Hermes 任务状态一览</div>
+        </div>
+        <!-- 二级切换栏：任务看板 | 里程碑看板 -->
+        <div class="sub-tab-bar">
+          <span class="sub-tab active" data-kanban-view="board" onclick="switchKanbanView('board', this)">任务看板</span>
+          <span class="sub-tab" data-kanban-view="milestone" onclick="switchKanbanView('milestone', this)">里程碑看板</span>
+        </div>
+        <button class="btn-icon" style="margin-left:auto;" title="刷新" onclick="showToast('刷新成功')">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </div>
     <div class="page-body">
-      <div class="kanban-board">
 
-        <!-- Backlog -->
-        <div class="kanban-col">
-          <div class="kanban-col-header">
-            <div class="kanban-col-dot" style="background: var(--text-disabled)"></div>
-            <span class="kanban-col-title">Backlog</span>
-            <span class="kanban-col-count">4</span>
-          </div>
-          <div class="task-card">
-            <div class="task-card-title">[M1.3] 纯前端环境部署</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260506-020</span>
-              <span class="task-card-project">hermes多功能看板</span>
+      <!-- 子视图：任务看板（三列 Kanban） -->
+      <div id="kanban-board-view">
+        <div class="kanban-board">
+          <!-- Backlog -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <div class="kanban-col-dot" style="background: var(--text-disabled)"></div>
+              <span class="kanban-col-title">Backlog</span>
+              <span class="kanban-col-count">4</span>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[M1.3] 纯前端环境部署</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260506-020</span>
+                <span class="task-card-project">hermes多功能看板</span>
+              </div>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[M2] token用量统计研究与落地</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260505-015</span>
+              </div>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[M3] 任务看板前端界面</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260505-016</span>
+              </div>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[P2] cron 看门狗：超时任务检测</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p2">P2</span>
+                <span class="task-card-id">TSK-20260504-011</span>
+              </div>
             </div>
           </div>
-          <div class="task-card">
-            <div class="task-card-title">[M2] token用量统计研究与落地</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260505-015</span>
+          <!-- In Progress -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <div class="kanban-col-dot" style="background: var(--accent)"></div>
+              <span class="kanban-col-title">In Progress</span>
+              <span class="kanban-col-count">1</span>
+            </div>
+            <div class="task-card" style="border-color: rgba(113,112,255,0.3)">
+              <div class="task-card-title">[M1.1] uniapp框架研究</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260506-018</span>
+              </div>
             </div>
           </div>
-          <div class="task-card">
-            <div class="task-card-title">[M3] 任务看板前端界面</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260505-016</span>
+          <!-- Done -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <div class="kanban-col-dot" style="background: var(--success)"></div>
+              <span class="kanban-col-title">Done</span>
+              <span class="kanban-col-count">2</span>
             </div>
-          </div>
-          <div class="task-card">
-            <div class="task-card-title">[P2] cron 看门狗：超时任务检测</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p2">P2</span>
-              <span class="task-card-id">TSK-20260504-011</span>
+            <div class="task-card" style="opacity: 0.6">
+              <div class="task-card-title">[M1] 选取前端框架</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260505-014</span>
+              </div>
+            </div>
+            <div class="task-card" style="opacity: 0.6">
+              <div class="task-card-title">[M1.2] 功能接口需求清单</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p0">P0</span>
+                <span class="task-card-id">TSK-20260506-019</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- In Progress -->
-        <div class="kanban-col">
-          <div class="kanban-col-header">
-            <div class="kanban-col-dot" style="background: var(--accent)"></div>
-            <span class="kanban-col-title">In Progress</span>
-            <span class="kanban-col-count">1</span>
+      <!-- 子视图：里程碑看板（二期新增） -->
+      <div id="kanban-milestone-view" style="display:none;">
+        <div class="milestone-list">
+          <div class="milestone-item">
+            <div class="milestone-header">
+              <div class="milestone-name">M1 — 选取前端框架</div>
+              <div class="milestone-meta">
+                <span>3/3 已完成</span>
+                <span class="milestone-pct" style="color:var(--success)">100%</span>
+                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+              </div>
+            </div>
+            <div class="milestone-progress">
+              <div class="milestone-bar-wrap">
+                <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+              </div>
+            </div>
+            <div class="milestone-detail">
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M1] 选取前端框架</span>
+                <span class="milestone-task-assignee">紫灵</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M1.1] uniapp框架研究</span>
+                <span class="milestone-task-assignee">紫灵</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M1.2] 功能接口需求清单</span>
+                <span class="milestone-task-assignee">紫灵</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+            </div>
           </div>
-          <div class="task-card" style="border-color: rgba(113,112,255,0.3)">
-            <div class="task-card-title">[M1.1] uniapp框架研究</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260506-018</span>
+
+          <div class="milestone-item">
+            <div class="milestone-header">
+              <div class="milestone-name">M2 — Token 用量统计研究与落地</div>
+              <div class="milestone-meta">
+                <span>2/2 已完成</span>
+                <span class="milestone-pct" style="color:var(--success)">100%</span>
+                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+              </div>
+            </div>
+            <div class="milestone-progress">
+              <div class="milestone-bar-wrap">
+                <div class="milestone-bar-fill" style="width:100%; background:var(--success)"></div>
+              </div>
+            </div>
+            <div class="milestone-detail">
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M2] 研究 hermes token 用量统计方式并落地实现</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M2.2] agent运行情况前端界面</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="milestone-item">
+            <div class="milestone-header">
+              <div class="milestone-name">M3 — 任务看板与 Agent 状态</div>
+              <div class="milestone-meta">
+                <span>1/4 已完成</span>
+                <span class="milestone-pct" style="color:var(--accent)">25%</span>
+                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+              </div>
+            </div>
+            <div class="milestone-progress">
+              <div class="milestone-bar-wrap">
+                <div class="milestone-bar-fill" style="width:25%; background:var(--accent)"></div>
+              </div>
+            </div>
+            <div class="milestone-detail">
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--success)"></div>
+                <span class="milestone-task-name">[M3.3] token趋势优化</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--accent)"></div>
+                <span class="milestone-task-name">[M3.1] 统计模型状态（cooldown）</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M3.2] 记忆内容阅览</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M3.4] agent工作状态显示</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="milestone-item" style="border-color: rgba(113,112,255,0.3)">
+            <div class="milestone-header">
+              <div class="milestone-name">M4 — 二期页签扩展（进行中）</div>
+              <div class="milestone-meta">
+                <span>0/4 已完成</span>
+                <span class="milestone-pct" style="color:var(--text-muted)">0%</span>
+                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+              </div>
+            </div>
+            <div class="milestone-progress">
+              <div class="milestone-bar-wrap">
+                <div class="milestone-bar-fill" style="width:0%; background:var(--accent)"></div>
+              </div>
+            </div>
+            <div class="milestone-detail">
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--accent)"></div>
+                <span class="milestone-task-name">[M4.1] 新建页签的前端设计</span>
+                <span class="milestone-task-assignee">紫灵</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M4.2] git仓库信息页签</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M4.3] skill信息页签</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p1">P1</span>
+              </div>
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M4.4] cronjob及状态显示页签</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="milestone-item">
+            <div class="milestone-header">
+              <div class="milestone-name">M3.5 — 里程碑进度一览</div>
+              <div class="milestone-meta">
+                <span>0/1 待开始</span>
+                <span class="milestone-pct" style="color:var(--text-muted)">0%</span>
+                <span class="milestone-detail-toggle" onclick="toggleMilestone(this)">展开 ▽</span>
+              </div>
+            </div>
+            <div class="milestone-progress">
+              <div class="milestone-bar-wrap">
+                <div class="milestone-bar-fill" style="width:0%; background:var(--warning)"></div>
+              </div>
+            </div>
+            <div class="milestone-detail">
+              <div class="milestone-task-row">
+                <div class="milestone-task-status" style="background:var(--text-disabled)"></div>
+                <span class="milestone-task-name">[M3.5] 里程碑进度一览</span>
+                <span class="milestone-task-assignee">辛如音</span>
+                <span class="badge badge-p0">P0</span>
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- Done -->
-        <div class="kanban-col">
-          <div class="kanban-col-header">
-            <div class="kanban-col-dot" style="background: var(--success)"></div>
-            <span class="kanban-col-title">Done</span>
-            <span class="kanban-col-count">2</span>
-          </div>
-          <div class="task-card" style="opacity: 0.6">
-            <div class="task-card-title">[M1] 选取前端框架</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260505-014</span>
-            </div>
-          </div>
-          <div class="task-card" style="opacity: 0.6">
-            <div class="task-card-title">[M1.2] 功能接口需求清单</div>
-            <div class="task-card-meta">
-              <span class="badge badge-p0">P0</span>
-              <span class="task-card-id">TSK-20260506-019</span>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
 
-  <!-- ===== Agent Page ===== -->
+  <!-- ===== Agent Page (二期新增：子视图切换 + 标题改为"Agent") ===== -->
   <div class="page" id="agent-page">
     <div class="page-header">
-      <div>
-        <div class="page-title">Agent 运行状态</div>
-        <div class="page-subtitle">实时监控 Agent 活跃情况</div>
-      </div>
-      <div>
-        <button class="btn btn-ghost" onclick="showToast('已刷新')">
-          <svg viewBox="0 0 14 14" fill="none"><path d="M11.5 7a4.5 4.5 0 11-1.1-2.9M11.5 1.5v3.5h-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          手动刷新
+      <div style="display:flex; align-items:center; gap:16px; width:100%;">
+        <div>
+          <div class="page-title">Agent</div>
+          <div class="page-subtitle">Agent 运行状态与定时任务</div>
+        </div>
+        <!-- 二级切换栏：状态 | CronJob -->
+        <div class="sub-tab-bar">
+          <span class="sub-tab active" data-agent-view="status" onclick="switchAgentView('status', this)">状态</span>
+          <span class="sub-tab" data-agent-view="cronjob" onclick="switchAgentView('cronjob', this)">CronJob</span>
+        </div>
+        <button class="btn-icon" style="margin-left:auto;" title="刷新" onclick="showToast('刷新成功')">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </div>
     <div class="page-body">
-      <div class="agent-grid">
 
-        <!-- Agent 1 -->
-        <div class="agent-card">
-          <div class="agent-card-header">
-            <div class="agent-info">
-              <div class="agent-avatar" style="background: #5e6ad2">紫</div>
-              <div>
-                <div class="agent-name">紫灵</div>
-                <div class="agent-model">gpt-4o</div>
+      <!-- 子视图：Agent 状态（原内容） -->
+      <div id="agent-status-view">
+        <div class="agent-grid">
+          <div class="agent-card">
+            <div class="agent-card-header">
+              <div class="agent-info">
+                <div class="agent-avatar" style="background: #5e6ad2">紫</div>
+                <div>
+                  <div class="agent-name">紫灵</div>
+                  <div class="agent-model">gpt-4o</div>
+                </div>
               </div>
+              <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
             </div>
-            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
-          </div>
-          <div class="agent-stats">
-            <div class="agent-stat">
-              <div class="agent-stat-value">127</div>
-              <div class="agent-stat-label">总任务</div>
+            <div class="agent-stats">
+              <div class="agent-stat"><div class="agent-stat-value">127</div><div class="agent-stat-label">总任务</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">8m</div><div class="agent-stat-label">运行时长</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">3</div><div class="agent-stat-label">并发</div></div>
             </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">8m</div>
-              <div class="agent-stat-label">运行时长</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">3</div>
-              <div class="agent-stat-label">并发</div>
+            <div class="agent-actions">
+              <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+              <button class="btn btn-ghost btn-sm">日志</button>
             </div>
           </div>
-          <div class="agent-actions">
-            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
-            <button class="btn btn-ghost btn-sm">日志</button>
+
+          <div class="agent-card">
+            <div class="agent-card-header">
+              <div class="agent-info">
+                <div class="agent-avatar" style="background: #10b981">辛</div>
+                <div>
+                  <div class="agent-name">辛如音</div>
+                  <div class="agent-model">claude-3.5-sonnet</div>
+                </div>
+              </div>
+              <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
+            </div>
+            <div class="agent-stats">
+              <div class="agent-stat"><div class="agent-stat-value">84</div><div class="agent-stat-label">总任务</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">12m</div><div class="agent-stat-label">运行时长</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">2</div><div class="agent-stat-label">并发</div></div>
+            </div>
+            <div class="agent-actions">
+              <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+              <button class="btn btn-ghost btn-sm">日志</button>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-header">
+              <div class="agent-info">
+                <div class="agent-avatar" style="background: #f59e0b">银</div>
+                <div>
+                  <div class="agent-name">银月</div>
+                  <div class="agent-model">gemini-2.0-flash</div>
+                </div>
+              </div>
+              <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
+            </div>
+            <div class="agent-stats">
+              <div class="agent-stat"><div class="agent-stat-value">203</div><div class="agent-stat-label">总任务</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">5m</div><div class="agent-stat-label">运行时长</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">6</div><div class="agent-stat-label">并发</div></div>
+            </div>
+            <div class="agent-actions">
+              <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+              <button class="btn btn-ghost btn-sm">日志</button>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-header">
+              <div class="agent-info">
+                <div class="agent-avatar" style="background: #6b7280">文</div>
+                <div>
+                  <div class="agent-name">文思月</div>
+                  <div class="agent-model">—</div>
+                </div>
+              </div>
+              <span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>
+            </div>
+            <div class="agent-stats">
+              <div class="agent-stat"><div class="agent-stat-value">42</div><div class="agent-stat-label">总任务</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">2h</div><div class="agent-stat-label">离线时长</div></div>
+              <div class="agent-stat"><div class="agent-stat-value">0</div><div class="agent-stat-label">并发</div></div>
+            </div>
+            <div class="agent-actions">
+              <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
+              <button class="btn btn-ghost btn-sm">日志</button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Agent 2 -->
-        <div class="agent-card">
-          <div class="agent-card-header">
-            <div class="agent-info">
-              <div class="agent-avatar" style="background: #10b981">辛</div>
-              <div>
-                <div class="agent-name">辛如音</div>
-                <div class="agent-model">claude-3.5-sonnet</div>
-              </div>
-            </div>
-            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
-          </div>
-          <div class="agent-stats">
-            <div class="agent-stat">
-              <div class="agent-stat-value">84</div>
-              <div class="agent-stat-label">总任务</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">12m</div>
-              <div class="agent-stat-label">运行时长</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">2</div>
-              <div class="agent-stat-label">并发</div>
-            </div>
-          </div>
-          <div class="agent-actions">
-            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
-            <button class="btn btn-ghost btn-sm">日志</button>
-          </div>
+      <!-- 子视图：CronJob 状态（二期新增） -->
+      <div id="agent-cronjob-view" style="display:none;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+          <select class="filter-select">
+            <option>全部状态</option>
+            <option>活跃中</option>
+            <option>已暂停</option>
+            <option>异常</option>
+          </select>
+          <button class="btn btn-ghost btn-sm">
+            <svg viewBox="0 0 12 12" fill="none"><path d="M10 6A4 4 0 112.5 2.9M10 2v3H7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            刷新
+          </button>
         </div>
-
-        <!-- Agent 3 -->
-        <div class="agent-card">
-          <div class="agent-card-header">
-            <div class="agent-info">
-              <div class="agent-avatar" style="background: #f59e0b">银</div>
-              <div>
-                <div class="agent-name">银月</div>
-                <div class="agent-model">gemini-2.0-flash</div>
-              </div>
-            </div>
-            <span class="badge badge-online"><span class="badge-dot"></span>Online</span>
-          </div>
-          <div class="agent-stats">
-            <div class="agent-stat">
-              <div class="agent-stat-value">203</div>
-              <div class="agent-stat-label">总任务</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">5m</div>
-              <div class="agent-stat-label">运行时长</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">6</div>
-              <div class="agent-stat-label">并发</div>
-            </div>
-          </div>
-          <div class="agent-actions">
-            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
-            <button class="btn btn-ghost btn-sm">日志</button>
-          </div>
+        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;">
+          <table class="cronjob-table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>调度表达式</th>
+                <th>状态</th>
+                <th>上次运行</th>
+                <th>下次运行</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="cronjob-row">
+                <td><span class="cronjob-name">token-stats-sync</span></td>
+                <td><span class="cronjob-schedule">0 */2 * * *</span></td>
+                <td><span class="cronjob-status active"><span class="dot"></span>活跃中</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 08:00</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 10:00</span></td>
+                <td><button class="cronjob-action-btn">暂停</button></td>
+              </tr>
+              <tr class="cronjob-row">
+                <td><span class="cronjob-name">kanban-db-cleanup</span></td>
+                <td><span class="cronjob-schedule">0 3 * * *</span></td>
+                <td><span class="cronjob-status active"><span class="dot"></span>活跃中</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 03:00</span></td>
+                <td><span class="cronjob-last-run">2026-05-08 03:00</span></td>
+                <td><button class="cronjob-action-btn">暂停</button></td>
+              </tr>
+              <tr class="cronjob-row">
+                <td><span class="cronjob-name">agent-health-check</span></td>
+                <td><span class="cronjob-schedule">*/5 * * * *</span></td>
+                <td><span class="cronjob-status active"><span class="dot"></span>活跃中</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 09:55</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 10:00</span></td>
+                <td><button class="cronjob-action-btn">暂停</button></td>
+              </tr>
+              <tr class="cronjob-row">
+                <td><span class="cronjob-name">daily-report-email</span></td>
+                <td><span class="cronjob-schedule">0 9 * * 1-5</span></td>
+                <td><span class="cronjob-status paused"><span class="dot"></span>已暂停</span></td>
+                <td><span class="cronjob-last-run">2026-05-05 09:00</span></td>
+                <td><span class="cronjob-last-run">—</span></td>
+                <td><button class="cronjob-action-btn">启用</button></td>
+              </tr>
+              <tr class="cronjob-row">
+                <td><span class="cronjob-name">model-cost-tracker</span></td>
+                <td><span class="cronjob-schedule">0 0 * * *</span></td>
+                <td><span class="cronjob-status error"><span class="dot"></span>异常</span></td>
+                <td><span class="cronjob-last-run">2026-05-06 00:00</span></td>
+                <td><span class="cronjob-last-run">2026-05-07 00:00</span></td>
+                <td><button class="cronjob-action-btn">重试</button></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-
-        <!-- Agent 4 -->
-        <div class="agent-card">
-          <div class="agent-card-header">
-            <div class="agent-info">
-              <div class="agent-avatar" style="background: #6b7280">文</div>
-              <div>
-                <div class="agent-name">文思月</div>
-                <div class="agent-model">—</div>
-              </div>
-            </div>
-            <span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>
-          </div>
-          <div class="agent-stats">
-            <div class="agent-stat">
-              <div class="agent-stat-value">42</div>
-              <div class="agent-stat-label">总任务</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">2h</div>
-              <div class="agent-stat-label">离线时长</div>
-            </div>
-            <div class="agent-stat">
-              <div class="agent-stat-value">0</div>
-              <div class="agent-stat-label">并发</div>
-            </div>
-          </div>
-          <div class="agent-actions">
-            <button class="btn btn-ghost btn-sm" style="flex:1">查看详情</button>
-            <button class="btn btn-ghost btn-sm">日志</button>
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
 
+  <!-- ===== Repo Page (二期新增) ===== -->
+  <div class="page" id="repo-page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Git 仓库</div>
+        <div class="page-subtitle">关联仓库状态与提交记录</div>
+      </div>
+      <button class="btn btn-ghost" onclick="showToast('已同步所有仓库')">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M11.5 7a4.5 4.5 0 11-1.1-2.9M11.5 1.5v3.5h-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        同步
+      </button>
+    </div>
+    <div class="page-body">
+      <div class="repo-grid">
+        <!-- Repo 1: hermes-dashboard -->
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="#7170ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="#7170ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="#7170ff" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div class="repo-name">hermes-dashboard</div>
+              <div class="repo-desc">Hermes 多功能看板前端项目（uni-app + Vue 3）</div>
+            </div>
+            <span class="repo-branch">main</span>
+          </div>
+          <div class="repo-meta">
+            <div class="repo-meta-item">
+              <span>📂</span>
+              <span>hermes多功能看板</span>
+            </div>
+            <div class="repo-meta-item">
+              <span>📝</span>
+              <span>3 commits ahead</span>
+            </div>
+            <div class="repo-meta-item" style="margin-left:auto;">
+              <span class="dot" style="background:var(--success)"></span>
+              <span>已同步</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted);">
+              <span>上次提交:</span>
+              <span style="font-family:var(--font-mono); color:var(--text-disabled);">a1b2c3d</span>
+              <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">feat: 新增底部栏仓库页签与二级切换栏</span>
+              <span style="color:var(--text-disabled);">2分钟前</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repo 2: hermes-core -->
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="#10b981" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div class="repo-name">hermes-agent</div>
+              <div class="repo-desc">Hermes Agent 核心仓库（Skills / SOUL / 看板）</div>
+            </div>
+            <span class="repo-branch">develop</span>
+          </div>
+          <div class="repo-meta">
+            <div class="repo-meta-item">
+              <span>📂</span>
+              <span>hermes多功能看板</span>
+            </div>
+            <div class="repo-meta-item">
+              <span>📝</span>
+              <span>up to date</span>
+            </div>
+            <div class="repo-meta-item" style="margin-left:auto;">
+              <span class="dot" style="background:var(--success)"></span>
+              <span>已同步</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted);">
+              <span>上次提交:</span>
+              <span style="font-family:var(--font-mono); color:var(--text-disabled);">e4f5g6h</span>
+              <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">refactor: 优化看板同步逻辑，修复状态机死锁</span>
+              <span style="color:var(--text-disabled);">15分钟前</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repo 3: obsidian-vault -->
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div class="repo-name">obsidian-vault</div>
+              <div class="repo-desc">Obsidian 知识库（项目管理 / 技术文档 / Wiki）</div>
+            </div>
+            <span class="repo-branch">main</span>
+          </div>
+          <div class="repo-meta">
+            <div class="repo-meta-item">
+              <span>📂</span>
+              <span>00-项目管理</span>
+            </div>
+            <div class="repo-meta-item">
+              <span>📝</span>
+              <span>5 commits ahead</span>
+            </div>
+            <div class="repo-meta-item" style="margin-left:auto;">
+              <span class="dot" style="background:var(--warning)"></span>
+              <span>未推送</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted);">
+              <span>上次提交:</span>
+              <span style="font-family:var(--font-mono); color:var(--text-disabled);">i7j8k9l</span>
+              <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">docs: 更新看板总览，新增 M4 里程碑任务</span>
+              <span style="color:var(--text-disabled);">1小时前</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repo 4: skill 仓库 -->
+        <div class="repo-card">
+          <div class="repo-card-header">
+            <div class="repo-icon">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="#ef4444" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div class="repo-name">hermes-skills</div>
+              <div class="repo-desc">Agent Skills 插件仓库（公共 skill 集合）</div>
+            </div>
+            <span class="repo-branch">main</span>
+          </div>
+          <div class="repo-meta">
+            <div class="repo-meta-item">
+              <span>📂</span>
+              <span>skills</span>
+            </div>
+            <div class="repo-meta-item">
+              <span>📝</span>
+              <span>up to date</span>
+            </div>
+            <div class="repo-meta-item" style="margin-left:auto;">
+              <span class="dot" style="background:var(--error)"></span>
+              <span>同步失败</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted);">
+              <span>上次提交:</span>
+              <span style="font-family:var(--font-mono); color:var(--text-disabled);">m0n1p2q</span>
+              <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">add: 新增 kanban-orchestrator skill 部署脚本</span>
+              <span style="color:var(--text-disabled);">3小时前</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Mobile Tab Bar (二期新增"仓库"页签) ===== -->
+<div class="mobile-tab-bar" id="mobile-tab-bar" style="display: none;">
+  <a class="tab-link" data-page="stats-page" onclick="navigate('stats-page')">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="12" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
+    <span>统计</span>
+  </a>
+  <a class="tab-link" data-page="kanban-page" onclick="navigate('kanban-page')">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="4" height="14" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="6" y="4" width="4" height="11" rx="1.5" fill="currentColor" opacity="0.7"/><rect x="11" y="7" width="4" height="8" rx="1.5" fill="currentColor"/></svg>
+    <span>任务</span>
+  </a>
+  <a class="tab-link" data-page="agent-page" onclick="navigate('agent-page')">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" fill="currentColor"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>Agent</span>
+  </a>
+  <a class="tab-link" data-page="repo-page" onclick="navigate('repo-page')">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M2 4v8a2 2 0 002 2h8a2 2 0 002-2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2H2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <span>仓库</span>
+  </a>
 </div>
 
 <!-- ===== Tweaks Panel ===== -->
@@ -1559,13 +2216,36 @@
     btn.classList.toggle('on');
   }
 
-  // Close tweaks on outside click
+  // 关闭 Tweaks
   document.addEventListener('click', function(e) {
     const panel = document.querySelector('.tweaks-panel');
     if (!panel.contains(e.target)) {
       document.getElementById('tweaks').classList.remove('show');
     }
   });
+
+  // === 二期新增：Kanban 子视图切换 ===
+  function switchKanbanView(view, el) {
+    document.querySelectorAll('[data-kanban-view]').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('kanban-board-view').style.display = view === 'board' ? 'block' : 'none';
+    document.getElementById('kanban-milestone-view').style.display = view === 'milestone' ? 'block' : 'none';
+  }
+
+  // === 二期新增：Agent 子视图切换 ===
+  function switchAgentView(view, el) {
+    document.querySelectorAll('[data-agent-view]').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('agent-status-view').style.display = view === 'status' ? 'block' : 'none';
+    document.getElementById('agent-cronjob-view').style.display = view === 'cronjob' ? 'block' : 'none';
+  }
+
+  // === 二期新增：里程碑展开/收起 ===
+  function toggleMilestone(el) {
+    const detail = el.closest('.milestone-item').querySelector('.milestone-detail');
+    detail.classList.toggle('open');
+    el.textContent = detail.classList.contains('open') ? '收起 ▲' : '展开 ▽';
+  }
 </script>
 
 </body>
