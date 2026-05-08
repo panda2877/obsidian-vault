@@ -1,6 +1,6 @@
 # hermes多功能看板 BFF 设计文档
 
-> **版本**：v1.5 | **日期**：2026-05-08 | **作者**：辛如音
+> **版本**：v1.6 | **日期**：2026-05-08 | **作者**：辛如音
 
 ---
 
@@ -97,6 +97,7 @@ npm run build:mp-toutiao   # 头条小程序
 | LiteLLM API (`:4000`) | Token 用量原始日志 | HTTP (REST) |
 | PostgreSQL (`localhost:5432/litellm`) | Token 用量聚合查询 | SQL |
 | SQLite (`~/.hermes/kanban.db`) | 看板任务数据 | SQL |
+| JSON 文件 (`~/.hermes/cron/jobs.json`) | Cron 定时任务状态 | 文件读 |
 
 ### 2.2 技术选型
 
@@ -122,7 +123,8 @@ backend/
 │   ├── agents.js      # Agent 状态接口
 │   ├── auth.js        # 登录鉴权接口
 │   ├── milestone.js   # 里程碑接口（milestones + projects 三层级）
-│   └── repos.js       # Git 仓库状态接口
+│   ├── repos.js       # Git 仓库状态接口
+│   └── cronjobs.js    # Cron 定时任务状态接口
 ├── services/
 │   ├── litellmApi.js  # LiteLLM HTTP API 代理 + 模型健康状态后台同步
 │   ├── postgres.js    # PostgreSQL 查询服务
@@ -520,6 +522,69 @@ GET /api/agents
 - 主 Gateway（PID=195514）作为银月（`id=yinyue`）插入 profiles 数组首位，`isMain: true`
 - 待办数来自 SQLite `tasks` 表：`SELECT assignee, COUNT(*) FROM tasks WHERE status IN ('backlog', 'in-progress', 'in_progress') GROUP BY assignee`
 - profile 遍历：读取 `~/.hermes/profiles/` 目录，跳过 `shared` 子目录
+
+### 3.7 Cron 定时任务状态
+
+**背景**：Cron 定时任务（每日待办提醒、记忆巡检等）通过 Hermes Agent 的 cron 系统管理，数据存储在 `~/.hermes/cron/jobs.json`。BFF 负责读取该文件并转换为前端友好的格式。
+
+| 方法 | 路径 | 说明 |
+|:----:|:----|:------|
+| GET | `/api/cronjobs` | 获取所有 Cron 定时任务状态 |
+
+**数据源**：`~/.hermes/cron/jobs.json`
+
+**响应格式**：
+
+```json
+{
+  "total": 6,
+  "jobs": [
+    {
+      "name": "每日待办提醒",
+      "schedule": "0 9,19 * * *",
+      "scheduleDesc": "每天 09:00、19:00",
+      "state": "scheduled",
+      "enabled": true,
+      "status": "active",
+      "statusLabel": "活跃中",
+      "lastRunAt": "2026-05-08T09:00:00+08:00",
+      "nextRunAt": "2026-05-08T19:00:00+08:00",
+      "lastStatus": "success"
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|:----:|:----:|:------|
+| `name` | string | 任务名称 |
+| `schedule` | string | cron 表达式 `分 时 日 月 周` |
+| `scheduleDesc` | string | 中文调度描述（如 `每天 09:00、19:00`） |
+| `state` | string | 调度器状态：`scheduled` / `running` / `paused` |
+| `enabled` | boolean | 是否启用 |
+| `status` | string | 业务状态（BFF 映射）：`active`（活跃中）/ `paused`（已暂停）/ `error`（异常） |
+| `statusLabel` | string | 中文状态标签 |
+| `lastRunAt` | string | 上次运行时间 |
+| `nextRunAt` | string | 下次运行时间 |
+| `lastStatus` | string | 上次运行结果：`success` / `error` |
+
+**状态映射规则**：
+
+| 原始数据 | 映射后 |
+|:---------|:-------|
+| `enabled=true` + `state=scheduled` | `active` / 活跃中 |
+| `paused_at` 有值 | `paused` / 已暂停 |
+| `last_status=error` | `error` / 异常（优先级最高） |
+
+**调度描述解析**（`describeSchedule()` 函数，内联实现，零依赖）：
+
+- `0 9,19 * * *` → `每天 09:00、19:00`
+- `0 9 * * *` → `每天 09:00`
+- `*/10 * * * *` → `每 10 分钟`
+- `0 */6 * * *` → `每 6 小时`
+- `0 9 * * 1-5` → `工作日 09:00`
+
+**路径推导**：BFF 从 `config.hermes.profilesPath`（如 `/home/agentuser/.hermes/profiles/xingruyin/config.yaml`）向上回溯两级获取 Hermes 根目录，拼接 `cron/jobs.json` 路径。
 
 ---
 
@@ -975,6 +1040,26 @@ export default defineConfig({
 4. 返回 { agents: [...] }，前端 store 做状态映射
 5. 前端 workStatus 三值展示：工作中（绿色）| 空闲（黄色）| 断线（灰色）
 6. 页面无自动轮询，用户手动点击刷新按钮重新拉取
+```
+
+### 8.6 Cron 定时任务页面加载流程
+
+```
+1. 用户打开 Agent 状态页 agents.vue → 滚动到 CronJob 区域
+2. uni.request GET /api/cronjobs
+3. BFF routes/cronjobs.js 处理流程：
+   a. 推导 Hermes 根目录：从 config.hermes.profilesPath 回溯两级
+   b. 读取 ~/.hermes/cron/jobs.json（fs.readFileSync）
+   c. 遍历 jobs 数组，逐条转换：
+      - status 字段映射（enabled+state→active, paused_at→paused, last_status=error→error）
+      - describeSchedule() 解析 cron 表达式为中文描述
+   d. 返回 { total, jobs[] }
+4. 前端渲染：
+   a. loading 状态 → 骨架屏
+   b. 数据到达 → 卡片列表（任务名 / 调度描述 / 状态标签 / 上次/下次运行时间）
+   c. error 状态 → 错误提示 + 重试按钮
+   d. 空数据 → 空状态提示
+5. 页面无自动轮询，用户手动点击刷新按钮重新拉取
 ```
 
 **前端 Agent 卡片字段映射**：
