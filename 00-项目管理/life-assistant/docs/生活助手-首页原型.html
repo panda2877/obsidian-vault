@@ -195,65 +195,78 @@
   /* ── Overview Cards ── */
   .overview-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   .overview-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 18px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
   }
+  .overview-card:hover { background: var(--surface-hover); transform: translateY(-1px); }
+  .overview-card:active { transform: scale(0.98); }
   .overview-card .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
   .overview-card .value { font-size: 24px; font-weight: 700; }
-  .overview-card .value.income { color: var(--success); }
   .overview-card .value.expense { color: var(--danger); }
   .overview-card .sub { font-size: 11px; color: var(--text-placeholder); margin-top: 3px; }
+  .overview-card .sub.green { color: var(--success); }
 
   /* ── Section ── */
   .section-title {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 10px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title .more {
+    margin-left: auto;
+    font-size: 11px;
     color: var(--text-secondary);
+    cursor: pointer;
   }
 
-  /* ── Quick Actions ── */
-  .quick-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-  .quick-btn {
-    flex: 1;
-    max-width: 260px;
+  /* ── Urgent Todos (100% width) ── */
+  .urgent-todos {
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px 18px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .todo-item {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
     cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
+    transition: background 0.15s;
   }
-  .quick-btn:hover { background: var(--surface-hover); transform: translateY(-1px); }
-  .quick-btn:active { transform: scale(0.98); }
-  .quick-btn .icon {
-    width: 44px; height: 44px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
+  .todo-item:last-child { border-bottom: none; }
+  .todo-item:hover { background: var(--surface-hover); }
+  .todo-item.urgent { background: rgba(239, 68, 68, 0.04); }
+  .todo-priority {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
     flex-shrink: 0;
   }
-  .quick-btn .icon.green { background: rgba(34,197,94,0.15); }
-  .quick-btn .icon.blue { background: rgba(94,106,210,0.15); }
-  .quick-btn .info { flex: 1; }
-  .quick-btn .info .name { font-size: 14px; font-weight: 500; }
-  .quick-btn .info .desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .todo-priority.p1 { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .todo-priority.p2 { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .todo-priority.p3 { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .todo-info { flex: 1; min-width: 0; }
+  .todo-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .todo-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .todo-status { font-size: 14px; flex-shrink: 0; }
 
   /* ── Function Grid ── */
   .func-grid {
@@ -542,8 +555,6 @@
     }
     .top-bar { padding: 12px 16px 4px; }
     .top-bar-title { font-size: 18px; }
-    .quick-actions { flex-direction: column; }
-    .quick-btn { max-width: 100%; }
   }
 
   @media (max-width: 480px) {
@@ -631,42 +642,42 @@
       <div class="page active" id="page-home">
         <div class="overview-grid">
           <div class="overview-card">
-            <div class="label">本月收入</div>
-            <div class="value income">¥12,580</div>
-            <div class="sub">较上月 +8.2%</div>
+            <div class="label">今日 Token 消耗</div>
+            <div class="value" style="color:var(--primary);">12,580</div>
+            <div class="sub green">deepseek-backup 余额: ¥42.68</div>
           </div>
-          <div class="overview-card">
+          <div class="overview-card" onclick="alert('📝 快速记账弹窗')">
             <div class="label">本月支出</div>
             <div class="value expense">¥3,260</div>
-            <div class="sub">较上月 -5.1%</div>
-          </div>
-          <div class="overview-card">
-            <div class="label">待办任务</div>
-            <div class="value" style="color:var(--warning);">5</div>
-            <div class="sub">3项今日到期</div>
-          </div>
-          <div class="overview-card">
-            <div class="label">已记账天数</div>
-            <div class="value" style="color:var(--primary);">18</div>
-            <div class="sub">本月共 30 天</div>
+            <div class="sub">较上月 -5.1% · 点击记账</div>
           </div>
         </div>
 
-        <div class="section-title">快捷操作</div>
-        <div class="quick-actions">
-          <div class="quick-btn" onclick="alert('📝 快速记账弹窗')">
-            <div class="icon green">💰</div>
-            <div class="info">
-              <div class="name">快速记账</div>
-              <div class="desc">3秒记一笔</div>
+        <div class="section-title">紧急待办</div>
+        <div class="urgent-todos">
+          <div class="todo-item urgent">
+            <div class="todo-priority p1">P1</div>
+            <div class="todo-info">
+              <div class="todo-title">买牛奶和面包</div>
+              <div class="todo-meta">⏰ 今天 20:00 到期</div>
             </div>
+            <div class="todo-status">🔴</div>
           </div>
-          <div class="quick-btn" onclick="alert('✅ 快速待办弹窗')">
-            <div class="icon blue">📋</div>
-            <div class="info">
-              <div class="name">快速待办</div>
-              <div class="desc">想到就记下来</div>
+          <div class="todo-item">
+            <div class="todo-priority p2">P2</div>
+            <div class="todo-info">
+              <div class="todo-title">提交周报</div>
+              <div class="todo-meta">⏰ 明天 18:00 到期</div>
             </div>
+            <div class="todo-status">🟡</div>
+          </div>
+          <div class="todo-item">
+            <div class="todo-priority p3">P3</div>
+            <div class="todo-info">
+              <div class="todo-title">预约牙医</div>
+              <div class="todo-meta">⏰ 后天 14:00 到期</div>
+            </div>
+            <div class="todo-status">🟢</div>
           </div>
         </div>
 
