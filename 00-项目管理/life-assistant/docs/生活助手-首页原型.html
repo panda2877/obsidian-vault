@@ -167,6 +167,17 @@
     transition: background 0.2s;
   }
   .top-icon-btn:hover { background: var(--surface-hover); }
+  .top-icon-btn .grid-icon {
+    display: grid;
+    grid-template-columns: repeat(3, 3px);
+    gap: 2px;
+  }
+  .top-icon-btn .grid-icon span {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+  }
+  .top-icon-btn:hover .grid-icon span { background: var(--text); }
 
   /* ── Page Container ── */
   .page-container {
@@ -609,7 +620,9 @@
       </div>
       <div class="top-bar-right">
         <div class="top-icon-btn" title="搜索">🔍</div>
-        <div class="top-icon-btn" title="全部应用" onclick="openAllApps()">⊞</div>
+        <div class="top-icon-btn" title="全部应用" onclick="openAllApps()">
+          <div class="grid-icon"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
         <div class="top-icon-btn" title="通知">🔔</div>
       </div>
     </div>
@@ -619,43 +632,6 @@
 
 <!-- 🏠 首页 -->
       <div class="page active" id="page-home">
-        <!-- 最近动态 — 第一屏 -->
-        <div class="section-title">最近动态</div>
-        <div class="recent-list">
-          <div class="recent-item">
-            <div class="ri-icon expense">🍜</div>
-            <div class="ri-info">
-              <div class="ri-title">午餐 - 兰州拉面</div>
-              <div class="ri-meta">餐饮 · 10分钟前</div>
-            </div>
-            <div class="ri-amount expense">-¥28</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon todo">📋</div>
-            <div class="ri-info">
-              <div class="ri-title">买牛奶和面包</div>
-              <div class="ri-meta">待办 · 1小时前创建</div>
-            </div>
-            <div class="ri-amount" style="color:var(--warning);">⏳</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon income">💰</div>
-            <div class="ri-info">
-              <div class="ri-title">工资到账</div>
-              <div class="ri-meta">工资 · 昨天</div>
-            </div>
-            <div class="ri-amount income">+¥15,000</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon expense">🚗</div>
-            <div class="ri-info">
-              <div class="ri-title">打车去公司</div>
-              <div class="ri-meta">交通 · 昨天</div>
-            </div>
-            <div class="ri-amount expense">-¥35</div>
-          </div>
-        </div>
-
         <div class="overview-grid">
           <div class="overview-card">
             <div class="label">本月收入</div>
@@ -697,39 +673,39 @@
           </div>
         </div>
 
-        <div class="section-title">全部功能</div>
-        <div class="func-grid">
-          <div class="func-item" onclick="alert('📒 记账功能')">
-            <div class="fi-icon" style="background:rgba(34,197,94,0.12);">💰</div>
-            <div class="fi-name">记账</div>
+        <div class="section-title">最近动态</div>
+        <div class="recent-list">
+          <div class="recent-item">
+            <div class="ri-icon expense">🍜</div>
+            <div class="ri-info">
+              <div class="ri-title">午餐 - 兰州拉面</div>
+              <div class="ri-meta">餐饮 · 10分钟前</div>
+            </div>
+            <div class="ri-amount expense">-¥28</div>
           </div>
-          <div class="func-item" onclick="alert('✅ 待办功能')">
-            <div class="fi-icon" style="background:rgba(94,106,210,0.12);">📋</div>
-            <div class="fi-name">待办</div>
+          <div class="recent-item">
+            <div class="ri-icon todo">📋</div>
+            <div class="ri-info">
+              <div class="ri-title">买牛奶和面包</div>
+              <div class="ri-meta">待办 · 1小时前创建</div>
+            </div>
+            <div class="ri-amount" style="color:var(--warning);">⏳</div>
           </div>
-          <div class="func-item" onclick="alert('📅 日程功能')">
-            <div class="fi-icon" style="background:rgba(245,158,11,0.12);">📅</div>
-            <div class="fi-name">日程</div>
+          <div class="recent-item">
+            <div class="ri-icon income">💰</div>
+            <div class="ri-info">
+              <div class="ri-title">工资到账</div>
+              <div class="ri-meta">工资 · 昨天</div>
+            </div>
+            <div class="ri-amount income">+¥15,000</div>
           </div>
-          <div class="func-item" onclick="alert('📝 笔记功能')">
-            <div class="fi-icon" style="background:rgba(139,92,246,0.12);">📝</div>
-            <div class="fi-name">笔记</div>
-          </div>
-          <div class="func-item" onclick="alert('🏃 健康功能')">
-            <div class="fi-icon" style="background:rgba(236,72,153,0.12);">🏃</div>
-            <div class="fi-name">健康</div>
-          </div>
-          <div class="func-item" onclick="alert('📊 预算功能')">
-            <div class="fi-icon" style="background:rgba(16,185,129,0.12);">📊</div>
-            <div class="fi-name">预算</div>
-          </div>
-          <div class="func-item" onclick="alert('🏷️ 标签功能')">
-            <div class="fi-icon" style="background:rgba(99,102,241,0.12);">🏷️</div>
-            <div class="fi-name">标签</div>
-          </div>
-          <div class="func-item" onclick="alert('⚙️ 更多功能')">
-            <div class="fi-icon" style="background:rgba(255,255,255,0.06);">➕</div>
-            <div class="fi-name">更多</div>
+          <div class="recent-item">
+            <div class="ri-icon expense">🚗</div>
+            <div class="ri-info">
+              <div class="ri-title">打车去公司</div>
+              <div class="ri-meta">交通 · 昨天</div>
+            </div>
+            <div class="ri-amount expense">-¥35</div>
           </div>
         </div>
       </div>
@@ -956,7 +932,7 @@
       <span class="badge">3</span>
     </div>
     <div class="tab-item" onclick="openAllApps()">
-      <span class="tab-icon">⊞</span>
+      <span class="tab-icon"><span style="display:inline-grid;grid-template-columns:repeat(3,2.5px);gap:1.5px;vertical-align:middle;"><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span><span style="width:2.5px;height:2.5px;border-radius:50%;background:var(--text-placeholder);display:inline-block;"></span></span></span>
       <span class="tab-label">更多</span>
     </div>
   </div>
