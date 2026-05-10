@@ -348,12 +348,83 @@
     gap: 12px;
     margin-bottom: 24px;
   }
-  .more-hint {
-    font-size: 12px;
-    color: var(--text-placeholder);
-    text-align: center;
-    padding: 16px 0;
+
+  /* ── All-Apps Overlay ── */
+  .all-apps-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
+  .all-apps-overlay.open { display: flex; }
+  .all-apps-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 88%;
+    max-width: 400px;
+    max-height: 75vh;
+    overflow-y: auto;
+    animation: popIn 0.2s ease-out;
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .all-apps-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .all-apps-header span { font-size: 16px; font-weight: 600; }
+  .all-apps-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .all-apps-close:hover { background: var(--surface-hover); }
+  .all-apps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .all-apps-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .all-apps-item:hover { background: var(--surface-hover); transform: translateY(-1px); }
+  .all-apps-item:active { transform: scale(0.95); }
+  .all-apps-item .ai-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .all-apps-item .ai-name { font-size: 11px; color: var(--text-secondary); }
 
   /* ── Auth Page ── */
   .auth-page {
@@ -538,6 +609,7 @@
       </div>
       <div class="top-bar-right">
         <div class="top-icon-btn" title="搜索">🔍</div>
+        <div class="top-icon-btn" title="全部应用" onclick="openAllApps()">⊞</div>
         <div class="top-icon-btn" title="通知">🔔</div>
       </div>
     </div>
@@ -545,8 +617,45 @@
     <!-- Page Container -->
     <div class="page-container" id="pageContainer">
 
-      <!-- 🏠 首页 -->
+<!-- 🏠 首页 -->
       <div class="page active" id="page-home">
+        <!-- 最近动态 — 第一屏 -->
+        <div class="section-title">最近动态</div>
+        <div class="recent-list">
+          <div class="recent-item">
+            <div class="ri-icon expense">🍜</div>
+            <div class="ri-info">
+              <div class="ri-title">午餐 - 兰州拉面</div>
+              <div class="ri-meta">餐饮 · 10分钟前</div>
+            </div>
+            <div class="ri-amount expense">-¥28</div>
+          </div>
+          <div class="recent-item">
+            <div class="ri-icon todo">📋</div>
+            <div class="ri-info">
+              <div class="ri-title">买牛奶和面包</div>
+              <div class="ri-meta">待办 · 1小时前创建</div>
+            </div>
+            <div class="ri-amount" style="color:var(--warning);">⏳</div>
+          </div>
+          <div class="recent-item">
+            <div class="ri-icon income">💰</div>
+            <div class="ri-info">
+              <div class="ri-title">工资到账</div>
+              <div class="ri-meta">工资 · 昨天</div>
+            </div>
+            <div class="ri-amount income">+¥15,000</div>
+          </div>
+          <div class="recent-item">
+            <div class="ri-icon expense">🚗</div>
+            <div class="ri-info">
+              <div class="ri-title">打车去公司</div>
+              <div class="ri-meta">交通 · 昨天</div>
+            </div>
+            <div class="ri-amount expense">-¥35</div>
+          </div>
+        </div>
+
         <div class="overview-grid">
           <div class="overview-card">
             <div class="label">本月收入</div>
@@ -621,42 +730,6 @@
           <div class="func-item" onclick="alert('⚙️ 更多功能')">
             <div class="fi-icon" style="background:rgba(255,255,255,0.06);">➕</div>
             <div class="fi-name">更多</div>
-          </div>
-        </div>
-
-        <div class="section-title">最近动态</div>
-        <div class="recent-list">
-          <div class="recent-item">
-            <div class="ri-icon expense">🍜</div>
-            <div class="ri-info">
-              <div class="ri-title">午餐 - 兰州拉面</div>
-              <div class="ri-meta">餐饮 · 10分钟前</div>
-            </div>
-            <div class="ri-amount expense">-¥28</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon todo">📋</div>
-            <div class="ri-info">
-              <div class="ri-title">买牛奶和面包</div>
-              <div class="ri-meta">待办 · 1小时前创建</div>
-            </div>
-            <div class="ri-amount" style="color:var(--warning);">⏳</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon income">💰</div>
-            <div class="ri-info">
-              <div class="ri-title">工资到账</div>
-              <div class="ri-meta">工资 · 昨天</div>
-            </div>
-            <div class="ri-amount income">+¥15,000</div>
-          </div>
-          <div class="recent-item">
-            <div class="ri-icon expense">🚗</div>
-            <div class="ri-info">
-              <div class="ri-title">打车去公司</div>
-              <div class="ri-meta">交通 · 昨天</div>
-            </div>
-            <div class="ri-amount expense">-¥35</div>
           </div>
         </div>
       </div>
@@ -771,7 +844,6 @@
             <div class="fi-name">设置</div>
           </div>
         </div>
-        <div class="more-hint">💡 可在「设置 > 底部Tab管理」自定义底部导航</div>
       </div>
       <!-- ⚙️ 设置 -->
       <div class="page" id="page-settings">
@@ -808,6 +880,62 @@
     </div>
   </div>
 
+  <!-- ── All-Apps Overlay ── -->
+  <div class="all-apps-overlay" id="allAppsOverlay" onclick="if(event.target===this)closeAllApps()">
+    <div class="all-apps-panel">
+      <div class="all-apps-header">
+        <span>全部功能</span>
+        <button class="all-apps-close" onclick="closeAllApps()">✕</button>
+      </div>
+      <div class="all-apps-grid">
+        <div class="all-apps-item" onclick="closeAllApps();navigate('home')">
+          <div class="ai-icon" style="background:rgba(94,106,210,0.12);">🏠</div>
+          <div class="ai-name">首页</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('ledger')">
+          <div class="ai-icon" style="background:rgba(34,197,94,0.12);">💰</div>
+          <div class="ai-name">记账</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('todo')">
+          <div class="ai-icon" style="background:rgba(94,106,210,0.12);">📋</div>
+          <div class="ai-name">待办</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('schedule')">
+          <div class="ai-icon" style="background:rgba(245,158,11,0.12);">📅</div>
+          <div class="ai-name">日程</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('notes')">
+          <div class="ai-icon" style="background:rgba(139,92,246,0.12);">📝</div>
+          <div class="ai-name">笔记</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('health')">
+          <div class="ai-icon" style="background:rgba(236,72,153,0.12);">🏃</div>
+          <div class="ai-name">健康</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('stats')">
+          <div class="ai-icon" style="background:rgba(16,185,129,0.12);">📊</div>
+          <div class="ai-name">统计</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('kanban')">
+          <div class="ai-icon" style="background:rgba(99,102,241,0.12);">🗂️</div>
+          <div class="ai-name">看板</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('agents')">
+          <div class="ai-icon" style="background:rgba(94,106,210,0.12);">🤖</div>
+          <div class="ai-name">Agent</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('repo')">
+          <div class="ai-icon" style="background:rgba(255,255,255,0.06);">📁</div>
+          <div class="ai-name">仓库</div>
+        </div>
+        <div class="all-apps-item" onclick="closeAllApps();navigate('settings')">
+          <div class="ai-icon" style="background:rgba(255,255,255,0.06);">⚙️</div>
+          <div class="ai-name">设置</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Mobile Bottom Tab ── -->
   <div class="mobile-tab-bar" id="mobileTabBar">
     <div class="tab-item active" data-page="home" onclick="navigate('home')">
@@ -818,10 +946,6 @@
       <span class="tab-icon">💰</span>
       <span class="tab-label">记账</span>
     </div>
-    <div class="tab-item" data-page="todo" onclick="navigate('todo')">
-      <span class="tab-icon">📋</span>
-      <span class="tab-label">待办</span>
-    </div>
     <div class="tab-item" data-page="stats" onclick="navigate('stats')">
       <span class="tab-icon">📊</span>
       <span class="tab-label">统计</span>
@@ -831,8 +955,8 @@
       <span class="tab-label">看板</span>
       <span class="badge">3</span>
     </div>
-    <div class="tab-item" data-page="more" onclick="navigate('more')">
-      <span class="tab-icon">⚙️</span>
+    <div class="tab-item" onclick="openAllApps()">
+      <span class="tab-icon">⊞</span>
       <span class="tab-label">更多</span>
     </div>
   </div>
@@ -877,11 +1001,21 @@ function navigate(pageId) {
   document.getElementById('pageTitle').textContent = pageTitles[pageId] || pageId;
   document.getElementById('pageSubtitle').textContent = pageSubtitles[pageId] || '';
   document.getElementById('pageContainer').scrollTop = 0;
+  // Close overlay if open
+  closeAllApps();
+}
+
+function openAllApps() {
+  document.getElementById('allAppsOverlay').classList.add('open');
+}
+function closeAllApps() {
+  document.getElementById('allAppsOverlay').classList.remove('open');
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  const map = { '1': 'home', '2': 'ledger', '3': 'todo', '4': 'stats', '5': 'kanban', '6': 'more' };
+  if (e.key === 'Escape') { closeAllApps(); return; }
+  const map = { '1': 'home', '2': 'ledger', '3': 'stats', '4': 'kanban' };
   if (map[e.key]) navigate(map[e.key]);
 });
 </script>
