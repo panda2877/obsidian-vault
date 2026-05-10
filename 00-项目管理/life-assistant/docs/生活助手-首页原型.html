@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>生活助手 — 原型</title>
+<style>
+  :root {
+    --bg: #08090a;
+    --surface: #0f1011;
+    --surface-hover: #191a1b;
+    --text: #f7f8f8;
+    --text-secondary: #8a8f98;
+    --text-placeholder: #62666d;
+    --text-disabled: #3d4045;
+    --primary: #5e6ad2;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --border: rgba(255,255,255,0.08);
+    --radius: 8px;
+    --radius-sm: 6px;
+    --tab-height: 64px;
+    --topbar-height: 52px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── App Container ── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg);
+  }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    background: var(--bg);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .top-logo {
+    width: 28px; height: 28px;
+    background: var(--primary);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #fff;
+  }
+  .top-brand {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .top-icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .top-icon-btn:hover { background: var(--surface-hover); }
+  .top-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ── Page Title ── */
+  .page-header {
+    padding: 4px 16px 12px;
+    flex-shrink: 0;
+  }
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ── Page Container ── */
+  .page-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: calc(var(--tab-height) + var(--safe-bottom) + 8px);
+    scroll-behavior: smooth;
+  }
+  .page-container::-webkit-scrollbar { display: none; }
+
+  /* ── Pages ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Overview Cards ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 16px 12px;
+  }
+  .overview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .overview-card .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .overview-card .value {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .overview-card .value.income { color: var(--success); }
+  .overview-card .value.expense { color: var(--danger); }
+  .overview-card .sub {
+    font-size: 11px;
+    color: var(--text-placeholder);
+    margin-top: 2px;
+  }
+
+  /* ── Quick Actions ── */
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 16px 8px;
+  }
+  .quick-actions {
+    display: flex;
+    gap: 10px;
+    padding: 0 16px 12px;
+  }
+  .quick-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .quick-btn:hover { background: var(--surface-hover); transform: translateY(-1px); }
+  .quick-btn:active { transform: scale(0.98); }
+  .quick-btn .icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .quick-btn .icon.green { background: rgba(34,197,94,0.15); }
+  .quick-btn .icon.blue { background: rgba(94,106,210,0.15); }
+  .quick-btn .info { flex: 1; }
+  .quick-btn .info .name { font-size: 14px; font-weight: 500; }
+  .quick-btn .info .desc { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ── Function Grid ── */
+  .func-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 16px 12px;
+  }
+  .func-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .func-item:hover { background: var(--surface-hover); transform: translateY(-1px); }
+  .func-item:active { transform: scale(0.96); }
+  .func-item .fi-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .func-item .fi-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* ── Recent Activity ── */
+  .recent-list {
+    padding: 0 16px;
+  }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item .ri-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .recent-item .ri-icon.expense { background: rgba(239,68,68,0.12); }
+  .recent-item .ri-icon.income { background: rgba(34,197,94,0.12); }
+  .recent-item .ri-icon.todo { background: rgba(94,106,210,0.12); }
+  .recent-item .ri-info { flex: 1; }
+  .recent-item .ri-title { font-size: 13px; }
+  .recent-item .ri-meta { font-size: 11px; color: var(--text-placeholder); margin-top: 1px; }
+  .recent-item .ri-amount {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .recent-item .ri-amount.expense { color: var(--danger); }
+  .recent-item .ri-amount.income { color: var(--success); }
+
+  /* ── Placeholder Pages ── */
+  .placeholder-page {
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .placeholder-page .pp-icon { font-size: 48px; margin-bottom: 16px; }
+  .placeholder-page .pp-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .placeholder-page .pp-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* ── Bottom Tab Bar ── */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: calc(var(--tab-height) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    padding: 6px 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-item .tab-icon {
+    font-size: 20px;
+    line-height: 1;
+    transition: transform 0.2s;
+  }
+  .tab-item .tab-label {
+    font-size: 10px;
+    color: var(--text-placeholder);
+    transition: color 0.2s;
+  }
+  .tab-item.active .tab-label { color: var(--primary); font-weight: 500; }
+  .tab-item.active .tab-icon { transform: scale(1.1); }
+  .tab-item:hover .tab-label { color: var(--text-secondary); }
+  .tab-item.active:hover .tab-label { color: var(--primary); }
+  .tab-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    transform: translateX(14px);
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  /* ── Auth Page ── */
+  .auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .auth-page .auth-icon { font-size: 56px; margin-bottom: 20px; }
+  .auth-page .auth-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .auth-page .auth-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
+  .auth-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  .auth-input:focus { border-color: var(--primary); }
+  .auth-input::placeholder { color: var(--text-placeholder); letter-spacing: 0; }
+  .auth-btn {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 320px;
+    padding: 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .auth-btn:hover { opacity: 0.9; }
+  .auth-btn:active { transform: scale(0.98); }
+  .auth-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-placeholder);
+  }
+
+  /* ── Settings Page ── */
+  .settings-group {
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
+  .settings-group-title {
+    font-size: 12px;
+    color: var(--text-placeholder);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 4px 8px;
+  }
+  .settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .settings-item:hover { background: var(--surface-hover); }
+  .settings-item .si-left { display: flex; align-items: center; gap: 10px; }
+  .settings-item .si-icon { font-size: 16px; }
+  .settings-item .si-label { font-size: 14px; }
+  .settings-item .si-arrow { color: var(--text-placeholder); font-size: 14px; }
+
+  /* ── Responsive ── */
+  @media (min-width: 640px) {
+    .app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .page.active { animation: fadeIn 0.25s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-logo">🧬</div>
+      <span class="top-brand">生活助手</span>
+    </div>
+    <div class="top-bar-right">
+      <div class="top-icon-btn" title="搜索">🔍</div>
+      <div class="top-icon-btn" title="通知">🔔</div>
+      <div class="top-avatar">Y</div>
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-title" id="pageTitle">首页</div>
+    <div class="page-subtitle" id="pageSubtitle">今天也要好好生活 🌟</div>
+  </div>
+
+  <!-- Page Container -->
+  <div class="page-container" id="pageContainer">
+
+    <!-- 🏠 首页 -->
+    <div class="page active" id="page-home">
+      <!-- 概览卡片 -->
+      <div class="overview-grid">
+        <div class="overview-card">
+          <div class="label">本月收入</div>
+          <div class="value income">¥12,580</div>
+          <div class="sub">较上月 +8.2%</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">本月支出</div>
+          <div class="value expense">¥3,260</div>
+          <div class="sub">较上月 -5.1%</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">待办任务</div>
+          <div class="value" style="color:var(--warning);">5</div>
+          <div class="sub">3项今日到期</div>
+        </div>
+        <div class="overview-card">
+          <div class="label">已记账天数</div>
+          <div class="value" style="color:var(--primary);">18</div>
+          <div class="sub">本月共 30 天</div>
+        </div>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="section-title">快捷操作</div>
+      <div class="quick-actions">
+        <div class="quick-btn" onclick="alert('📝 快速记账弹窗')">
+          <div class="icon green">💰</div>
+          <div class="info">
+            <div class="name">快速记账</div>
+            <div class="desc">3秒记一笔</div>
+          </div>
+        </div>
+        <div class="quick-btn" onclick="alert('✅ 快速待办弹窗')">
+          <div class="icon blue">📋</div>
+          <div class="info">
+            <div class="name">快速待办</div>
+            <div class="desc">想到就记下来</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 功能入口 -->
+      <div class="section-title">全部功能</div>
+      <div class="func-grid">
+        <div class="func-item" onclick="alert('📒 记账功能')">
+          <div class="fi-icon" style="background:rgba(34,197,94,0.12);">💰</div>
+          <div class="fi-name">记账</div>
+        </div>
+        <div class="func-item" onclick="alert('✅ 待办功能')">
+          <div class="fi-icon" style="background:rgba(94,106,210,0.12);">📋</div>
+          <div class="fi-name">待办</div>
+        </div>
+        <div class="func-item" onclick="alert('📅 日程功能')">
+          <div class="fi-icon" style="background:rgba(245,158,11,0.12);">📅</div>
+          <div class="fi-name">日程</div>
+        </div>
+        <div class="func-item" onclick="alert('📝 笔记功能')">
+          <div class="fi-icon" style="background:rgba(139,92,246,0.12);">📝</div>
+          <div class="fi-name">笔记</div>
+        </div>
+        <div class="func-item" onclick="alert('🏃 健康功能')">
+          <div class="fi-icon" style="background:rgba(236,72,153,0.12);">🏃</div>
+          <div class="fi-name">健康</div>
+        </div>
+        <div class="func-item" onclick="alert('📊 预算功能')">
+          <div class="fi-icon" style="background:rgba(16,185,129,0.12);">📊</div>
+          <div class="fi-name">预算</div>
+        </div>
+        <div class="func-item" onclick="alert('🏷️ 标签功能')">
+          <div class="fi-icon" style="background:rgba(99,102,241,0.12);">🏷️</div>
+          <div class="fi-name">标签</div>
+        </div>
+        <div class="func-item" onclick="alert('⚙️ 更多功能')">
+          <div class="fi-icon" style="background:rgba(255,255,255,0.06);">➕</div>
+          <div class="fi-name">更多</div>
+        </div>
+      </div>
+
+      <!-- 最近动态 -->
+      <div class="section-title">最近动态</div>
+      <div class="recent-list">
+        <div class="recent-item">
+          <div class="ri-icon expense">🍜</div>
+          <div class="ri-info">
+            <div class="ri-title">午餐 - 兰州拉面</div>
+            <div class="ri-meta">餐饮 · 10分钟前</div>
+          </div>
+          <div class="ri-amount expense">-¥28</div>
+        </div>
+        <div class="recent-item">
+          <div class="ri-icon todo">📋</div>
+          <div class="ri-info">
+            <div class="ri-title">买牛奶和面包</div>
+            <div class="ri-meta">待办 · 1小时前创建</div>
+          </div>
+          <div class="ri-amount" style="color:var(--warning);">⏳</div>
+        </div>
+        <div class="recent-item">
+          <div class="ri-icon income">💰</div>
+          <div class="ri-info">
+            <div class="ri-title">工资到账</div>
+            <div class="ri-meta">工资 · 昨天</div>
+          </div>
+          <div class="ri-amount income">+¥15,000</div>
+        </div>
+        <div class="recent-item">
+          <div class="ri-icon expense">🚗</div>
+          <div class="ri-info">
+            <div class="ri-title">打车去公司</div>
+            <div class="ri-meta">交通 · 昨天</div>
+          </div>
+          <div class="ri-amount expense">-¥35</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📊 统计（占位） -->
+    <div class="page" id="page-stats">
+      <div class="placeholder-page">
+        <div class="pp-icon">📊</div>
+        <div class="pp-title">统计看板</div>
+        <div class="pp-desc">Token 用量趋势、模型健康状态<br>（现有页面，迁移中）</div>
+      </div>
+    </div>
+
+    <!-- 📋 看板（占位） -->
+    <div class="page" id="page-kanban">
+      <div class="placeholder-page">
+        <div class="pp-icon">📋</div>
+        <div class="pp-title">任务看板</div>
+        <div class="pp-desc">任务管理、状态跟踪、里程碑进度<br>（现有页面，迁移中）</div>
+      </div>
+    </div>
+
+    <!-- 🤖 Agent（占位） -->
+    <div class="page" id="page-agents">
+      <div class="placeholder-page">
+        <div class="pp-icon">🤖</div>
+        <div class="pp-title">Agent 管理</div>
+        <div class="pp-desc">Agent 运行状态、技能管理、CronJob<br>（现有页面，迁移中）</div>
+      </div>
+    </div>
+
+    <!-- 📁 仓库（占位） -->
+    <div class="page" id="page-repo">
+      <div class="placeholder-page">
+        <div class="pp-icon">📁</div>
+        <div class="pp-title">Git 仓库</div>
+        <div class="pp-desc">仓库状态、提交记录、分支信息<br>（现有页面，迁移中）</div>
+      </div>
+    </div>
+
+    <!-- ⚙️ 设置 -->
+    <div class="page" id="page-settings">
+      <div class="settings-group">
+        <div class="settings-group-title">设备与账户</div>
+        <div class="settings-item">
+          <div class="si-left"><span class="si-icon">🔐</span><span class="si-label">设备管理</span></div>
+          <span class="si-arrow">2台设备 ›</span>
+        </div>
+        <div class="settings-item">
+          <div class="si-left"><span class="si-icon">🔄</span><span class="si-label">Token 重置</span></div>
+          <span class="si-arrow">›</span>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">数据</div>
+        <div class="settings-item">
+          <div class="si-left"><span class="si-icon">📤</span><span class="si-label">导出数据</span></div>
+          <span class="si-arrow">›</span>
+        </div>
+        <div class="settings-item">
+          <div class="si-left"><span class="si-icon">📥</span><span class="si-label">导入数据</span></div>
+          <span class="si-arrow">›</span>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">关于</div>
+        <div class="settings-item">
+          <div class="si-left"><span class="si-icon">ℹ️</span><span class="si-label">版本</span></div>
+          <span class="si-arrow">v1.0.0 ›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <div class="tab-bar" id="tabBar">
+    <div class="tab-item active" data-page="home" onclick="navigate('home')">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
+    </div>
+    <div class="tab-item" data-page="stats" onclick="navigate('stats')">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">统计</span>
+    </div>
+    <div class="tab-item" data-page="kanban" onclick="navigate('kanban')">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">看板</span>
+      <span class="badge">3</span>
+    </div>
+    <div class="tab-item" data-page="agents" onclick="navigate('agents')">
+      <span class="tab-icon">🤖</span>
+      <span class="tab-label">Agent</span>
+    </div>
+    <div class="tab-item" data-page="repo" onclick="navigate('repo')">
+      <span class="tab-icon">📁</span>
+      <span class="tab-label">仓库</span>
+    </div>
+    <div class="tab-item" data-page="settings" onclick="navigate('settings')">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">设置</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const pageTitles = {
+  home: '首页',
+  stats: '统计',
+  kanban: '看板',
+  agents: 'Agent',
+  repo: '仓库',
+  settings: '设置'
+};
+const pageSubtitles = {
+  home: '今天也要好好生活 🌟',
+  stats: 'Token 用量与趋势分析',
+  kanban: '任务管理与里程碑进度',
+  agents: 'Agent 运行状态与技能管理',
+  repo: 'Git 仓库信息与提交记录',
+  settings: '设备管理与数据操作'
+};
+
+function navigate(pageId) {
+  // 切换页面
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+
+  // 切换 Tab
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-item[data-page="${pageId}"]`).classList.add('active');
+
+  // 更新标题
+  document.getElementById('pageTitle').textContent = pageTitles[pageId] || pageId;
+  document.getElementById('pageSubtitle').textContent = pageSubtitles[pageId] || '';
+
+  // 滚动到顶部
+  document.getElementById('pageContainer').scrollTop = 0;
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', (e) => {
+  const map = { '1': 'home', '2': 'stats', '3': 'kanban', '4': 'agents', '5': 'repo', '6': 'settings' };
+  if (map[e.key]) navigate(map[e.key]);
+});
+</script>
+
+</body>
+</html>
