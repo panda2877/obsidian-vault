@@ -340,6 +340,21 @@
   .settings-item .si-label { font-size: 14px; }
   .settings-item .si-arrow { color: var(--text-placeholder); font-size: 14px; }
 
+  /* ── More Grid ── */
+  .more-grid-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; margin-top: 8px; }
+  .more-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .more-hint {
+    font-size: 12px;
+    color: var(--text-placeholder);
+    text-align: center;
+    padding: 16px 0;
+  }
+
   /* ── Auth Page ── */
   .auth-page {
     display: flex;
@@ -467,15 +482,31 @@
       <span class="sidebar-brand-text">生活助手</span>
     </div>
     <div class="sidebar-nav">
-      <div class="nav-section-label">主要</div>
+      <div class="nav-section-label">生活</div>
       <div class="nav-item active" data-page="home" onclick="navigate('home')">
         <span class="ni-icon">🏠</span> 首页
       </div>
+      <div class="nav-item" data-page="ledger" onclick="navigate('ledger')">
+        <span class="ni-icon">💰</span> 记账
+      </div>
+      <div class="nav-item" data-page="todo" onclick="navigate('todo')">
+        <span class="ni-icon">📋</span> 待办
+      </div>
+      <div class="nav-item" data-page="schedule" onclick="navigate('schedule')">
+        <span class="ni-icon">📅</span> 日程
+      </div>
+      <div class="nav-item" data-page="notes" onclick="navigate('notes')">
+        <span class="ni-icon">📝</span> 笔记
+      </div>
+      <div class="nav-item" data-page="health" onclick="navigate('health')">
+        <span class="ni-icon">🏃</span> 健康
+      </div>
+      <div class="nav-section-label" style="margin-top:12px;">管理</div>
       <div class="nav-item" data-page="stats" onclick="navigate('stats')">
         <span class="ni-icon">📊</span> 统计
       </div>
       <div class="nav-item" data-page="kanban" onclick="navigate('kanban')">
-        <span class="ni-icon">📋</span> 看板
+        <span class="ni-icon">🗂️</span> 看板
         <span class="ni-badge">3</span>
       </div>
       <div class="nav-item" data-page="agents" onclick="navigate('agents')">
@@ -484,7 +515,6 @@
       <div class="nav-item" data-page="repo" onclick="navigate('repo')">
         <span class="ni-icon">📁</span> 仓库
       </div>
-      <div class="nav-section-label" style="margin-top:12px;">系统</div>
       <div class="nav-item" data-page="settings" onclick="navigate('settings')">
         <span class="ni-icon">⚙️</span> 设置
       </div>
@@ -631,6 +661,51 @@
         </div>
       </div>
 
+      <!-- 💰 记账 -->
+      <div class="page" id="page-ledger">
+        <div class="placeholder-page">
+          <div class="pp-icon">💰</div>
+          <div class="pp-title">记账</div>
+          <div class="pp-desc">收支记录、分类管理、预算控制<br>（M1 核心功能，开发中）</div>
+        </div>
+      </div>
+
+      <!-- 📋 待办 -->
+      <div class="page" id="page-todo">
+        <div class="placeholder-page">
+          <div class="pp-icon">📋</div>
+          <div class="pp-title">待办</div>
+          <div class="pp-desc">任务管理、优先级、到期提醒<br>（M1 核心功能，开发中）</div>
+        </div>
+      </div>
+
+      <!-- 📅 日程 -->
+      <div class="page" id="page-schedule">
+        <div class="placeholder-page">
+          <div class="pp-icon">📅</div>
+          <div class="pp-title">日程</div>
+          <div class="pp-desc">日历视图、事件管理、提醒<br>（后续版本）</div>
+        </div>
+      </div>
+
+      <!-- 📝 笔记 -->
+      <div class="page" id="page-notes">
+        <div class="placeholder-page">
+          <div class="pp-icon">📝</div>
+          <div class="pp-title">笔记</div>
+          <div class="pp-desc">随手记、分类整理、搜索<br>（后续版本）</div>
+        </div>
+      </div>
+
+      <!-- 🏃 健康 -->
+      <div class="page" id="page-health">
+        <div class="placeholder-page">
+          <div class="pp-icon">🏃</div>
+          <div class="pp-title">健康</div>
+          <div class="pp-desc">运动记录、健康数据、习惯追踪<br>（后续版本）</div>
+        </div>
+      </div>
+
       <!-- 📊 统计 -->
       <div class="page" id="page-stats">
         <div class="placeholder-page">
@@ -667,6 +742,37 @@
         </div>
       </div>
 
+      <!-- ⚙️ 更多（弹出网格） -->
+      <div class="page" id="page-more">
+        <div class="more-grid-title">其他功能</div>
+        <div class="more-grid">
+          <div class="func-item" onclick="navigate('schedule')">
+            <div class="fi-icon" style="background:rgba(245,158,11,0.12);">📅</div>
+            <div class="fi-name">日程</div>
+          </div>
+          <div class="func-item" onclick="navigate('notes')">
+            <div class="fi-icon" style="background:rgba(139,92,246,0.12);">📝</div>
+            <div class="fi-name">笔记</div>
+          </div>
+          <div class="func-item" onclick="navigate('health')">
+            <div class="fi-icon" style="background:rgba(236,72,153,0.12);">🏃</div>
+            <div class="fi-name">健康</div>
+          </div>
+          <div class="func-item" onclick="navigate('agents')">
+            <div class="fi-icon" style="background:rgba(94,106,210,0.12);">🤖</div>
+            <div class="fi-name">Agent</div>
+          </div>
+          <div class="func-item" onclick="navigate('repo')">
+            <div class="fi-icon" style="background:rgba(255,255,255,0.06);">📁</div>
+            <div class="fi-name">仓库</div>
+          </div>
+          <div class="func-item" onclick="navigate('settings')">
+            <div class="fi-icon" style="background:rgba(255,255,255,0.06);">⚙️</div>
+            <div class="fi-name">设置</div>
+          </div>
+        </div>
+        <div class="more-hint">💡 可在「设置 > 底部Tab管理」自定义底部导航</div>
+      </div>
       <!-- ⚙️ 设置 -->
       <div class="page" id="page-settings">
         <div class="settings-group">
@@ -708,42 +814,51 @@
       <span class="tab-icon">🏠</span>
       <span class="tab-label">首页</span>
     </div>
+    <div class="tab-item" data-page="ledger" onclick="navigate('ledger')">
+      <span class="tab-icon">💰</span>
+      <span class="tab-label">记账</span>
+    </div>
+    <div class="tab-item" data-page="todo" onclick="navigate('todo')">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">待办</span>
+    </div>
     <div class="tab-item" data-page="stats" onclick="navigate('stats')">
       <span class="tab-icon">📊</span>
       <span class="tab-label">统计</span>
     </div>
     <div class="tab-item" data-page="kanban" onclick="navigate('kanban')">
-      <span class="tab-icon">📋</span>
+      <span class="tab-icon">🗂️</span>
       <span class="tab-label">看板</span>
       <span class="badge">3</span>
     </div>
-    <div class="tab-item" data-page="agents" onclick="navigate('agents')">
-      <span class="tab-icon">🤖</span>
-      <span class="tab-label">Agent</span>
-    </div>
-    <div class="tab-item" data-page="repo" onclick="navigate('repo')">
-      <span class="tab-icon">📁</span>
-      <span class="tab-label">仓库</span>
-    </div>
-    <div class="tab-item" data-page="settings" onclick="navigate('settings')">
+    <div class="tab-item" data-page="more" onclick="navigate('more')">
       <span class="tab-icon">⚙️</span>
-      <span class="tab-label">设置</span>
+      <span class="tab-label">更多</span>
     </div>
   </div>
 </div>
 
 <script>
 const pageTitles = {
-  home: '首页', stats: '统计', kanban: '看板',
-  agents: 'Agent', repo: '仓库', settings: '设置'
+  home: '首页', ledger: '记账', todo: '待办',
+  schedule: '日程', notes: '笔记', health: '健康',
+  stats: '统计', kanban: '看板',
+  agents: 'Agent', repo: '仓库', settings: '设置',
+  more: '更多功能'
 };
 const pageSubtitles = {
   home: '今天也要好好生活 🌟',
+  ledger: '收支记录一目了然',
+  todo: '管理你的待办事项',
+  schedule: '日历与事件管理',
+  notes: '随手记，随时查',
+  health: '运动与健康数据',
   stats: 'Token 用量与趋势分析',
   kanban: '任务管理与里程碑进度',
   agents: 'Agent 运行状态与技能管理',
   repo: 'Git 仓库信息与提交记录',
-  settings: '设备管理与数据操作'
+  settings: '设备管理与数据操作',
+  more: '所有功能入口'
 };
 
 function navigate(pageId) {
@@ -766,7 +881,7 @@ function navigate(pageId) {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  const map = { '1': 'home', '2': 'stats', '3': 'kanban', '4': 'agents', '5': 'repo', '6': 'settings' };
+  const map = { '1': 'home', '2': 'ledger', '3': 'todo', '4': 'stats', '5': 'kanban', '6': 'more' };
   if (map[e.key]) navigate(map[e.key]);
 });
 </script>
