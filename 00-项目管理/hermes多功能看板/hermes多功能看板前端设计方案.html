@@ -638,9 +638,26 @@
 
     .kanban-board {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
       align-items: start;
+    }
+
+    /* Archived column — muted style for completed & archived tasks */
+    .kanban-col.archived .kanban-col-title {
+      color: var(--text-disabled);
+    }
+    .kanban-col.archived .kanban-col-dot {
+      background: var(--text-disabled) !important;
+      opacity: 0.5;
+    }
+    .kanban-col.archived .task-card {
+      opacity: 0.5;
+      border-color: var(--border-subtle);
+    }
+    .kanban-col.archived .task-card:hover {
+      opacity: 0.7;
+      border-color: var(--border);
     }
 
     .kanban-col {
@@ -1567,6 +1584,9 @@
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
     /* ===== Responsive ===== */
+    @media (max-width: 1200px) {
+      .kanban-board { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 900px) {
       .stat-grid { grid-template-columns: repeat(2, 1fr); }
       .chart-area { grid-template-columns: 1fr; }
@@ -1839,7 +1859,16 @@
           <span class="sub-tab active" data-kanban-view="board" onclick="switchKanbanView('board', this)">任务看板</span>
           <span class="sub-tab" data-kanban-view="milestone" onclick="switchKanbanView('milestone', this)">里程碑看板</span>
         </div>
-        <button class="btn-icon" style="margin-left:auto;" title="刷新" onclick="showToast('刷新成功')">
+        <!-- 状态筛选栏 -->
+        <div class="kanban-filters" style="margin-left:auto;">
+          <span class="filter-label">状态:</span>
+          <button class="filter-btn active" data-status="all" onclick="filterKanbanStatus('all', this)">全部</button>
+          <button class="filter-btn" data-status="backlog" onclick="filterKanbanStatus('backlog', this)">待办</button>
+          <button class="filter-btn" data-status="inprogress" onclick="filterKanbanStatus('inprogress', this)">进行中</button>
+          <button class="filter-btn" data-status="done" onclick="filterKanbanStatus('done', this)">已完成</button>
+          <button class="filter-btn" data-status="archived" onclick="filterKanbanStatus('archived', this)">已归档</button>
+        </div>
+        <button class="btn-icon" style="margin-left:12px;" title="刷新" onclick="showToast('刷新成功')">
           <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 11-1.2-3.2M13 2v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
@@ -1920,6 +1949,36 @@
               <div class="task-card-meta">
                 <span class="badge badge-p0">P0</span>
                 <span class="task-card-id">TSK-20260506-019</span>
+              </div>
+            </div>
+          </div>
+          <!-- Archived -->
+          <div class="kanban-col archived">
+            <div class="kanban-col-header">
+              <div class="kanban-col-dot" style="background: var(--text-disabled)"></div>
+              <span class="kanban-col-title">Archived</span>
+              <span class="kanban-col-count">3</span>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[M0] 项目初始化与需求调研</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p1">P1</span>
+                <span class="task-card-id">TSK-20260504-001</span>
+                <span class="task-card-project">hermes多功能看板</span>
+              </div>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[P3] 旧版看板数据迁移</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p2">P2</span>
+                <span class="task-card-id">TSK-20260504-008</span>
+              </div>
+            </div>
+            <div class="task-card">
+              <div class="task-card-title">[M0.1] 技术栈预研</div>
+              <div class="task-card-meta">
+                <span class="badge badge-p1">P1</span>
+                <span class="task-card-id">TSK-20260504-003</span>
               </div>
             </div>
           </div>
