@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Agent Connect — 原型 v0.1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: #0d0d0d;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* ===== App Container ===== */
+  .app {
+    width: 1200px;
+    height: 800px;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: #141414;
+    border-radius: 12px;
+    display: flex;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: #1a1a1a;
+    border-right: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .sidebar-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #a78bfa;
+    letter-spacing: 0.5px;
+  }
+
+  .sidebar-header p {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* Profile List */
+  .profile-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .profile-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+  }
+
+  .profile-item:hover {
+    background: #252525;
+  }
+
+  .profile-item.active {
+    background: #2d1b69;
+    border: 1px solid #7c3aed;
+  }
+
+  .profile-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .profile-avatar.purple { background: #7c3aed; color: #fff; }
+  .profile-avatar.green { background: #059669; color: #fff; }
+  .profile-avatar.blue { background: #2563eb; color: #fff; }
+  .profile-avatar.orange { background: #ea580c; color: #fff; }
+
+  .profile-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .profile-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e0e0e0;
+  }
+
+  .profile-desc {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .settings-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+
+  .settings-btn:hover {
+    background: #252525;
+    color: #e0e0e0;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .status-text {
+    font-size: 12px;
+    color: #666;
+  }
+
+  /* ===== Main Chat Area ===== */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .chat-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chat-profile-name {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .chat-profile-status {
+    font-size: 12px;
+    color: #22c55e;
+  }
+
+  .chat-header-right {
+    display: flex;
+    gap: 8px;
+  }
+
+  .header-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .header-btn:hover {
+    background: #252525;
+    color: #e0e0e0;
+  }
+
+  /* ===== Message List ===== */
+  .message-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Date separator */
+  .date-separator {
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    padding: 8px 0;
+    position: relative;
+  }
+
+  .date-separator::before,
+  .date-separator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 80px);
+    height: 1px;
+    background: #2a2a2a;
+  }
+
+  .date-separator::before { left: 0; }
+  .date-separator::after { right: 0; }
+
+  /* Message */
+  .message {
+    display: flex;
+    gap: 12px;
+    max-width: 85%;
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message.agent {
+    align-self: flex-start;
+  }
+
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .message-avatar.agent { background: #7c3aed; color: #fff; }
+  .message-avatar.user { background: #333; color: #e0e0e0; }
+
+  .message-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .message-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  .message.user .message-bubble {
+    background: #7c3aed;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .message.agent .message-bubble {
+    background: #252525;
+    color: #e0e0e0;
+    border-bottom-left-radius: 4px;
+  }
+
+  .message-bubble pre {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    overflow-x: auto;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    border: 1px solid #333;
+  }
+
+  .message-bubble code {
+    background: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .message-bubble .image-card {
+    margin: 8px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 300px;
+  }
+
+  .message-bubble .image-card img {
+    width: 100%;
+    display: block;
+  }
+
+  .message-bubble .file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .message-bubble .file-card:hover {
+    border-color: #7c3aed;
+  }
+
+  .file-icon {
+    font-size: 20px;
+  }
+
+  .file-info {
+    flex: 1;
+  }
+
+  .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e0e0e0;
+  }
+
+  .file-size {
+    font-size: 11px;
+    color: #888;
+  }
+
+  .message-time {
+    font-size: 11px;
+    color: #555;
+    padding: 0 4px;
+  }
+
+  .message.user .message-time {
+    text-align: right;
+  }
+
+  /* Streaming indicator */
+  .streaming-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .streaming-dots {
+    display: flex;
+    gap: 4px;
+  }
+
+  .streaming-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7c3aed;
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+
+  .streaming-dot:nth-child(1) { animation-delay: -0.32s; }
+  .streaming-dot:nth-child(2) { animation-delay: -0.16s; }
+  .streaming-dot:nth-child(3) { animation-delay: 0s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  .streaming-text {
+    font-size: 12px;
+    color: #888;
+  }
+
+  /* ===== Input Area ===== */
+  .input-area {
+    padding: 16px 24px 20px;
+    border-top: 1px solid #2a2a2a;
+    background: #141414;
+  }
+
+  .input-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .toolbar-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .toolbar-btn:hover {
+    background: #252525;
+    color: #e0e0e0;
+    border-color: #7c3aed;
+  }
+
+  .toolbar-btn.active {
+    background: #2d1b69;
+    border-color: #7c3aed;
+    color: #a78bfa;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  .input-wrapper textarea {
+    width: 100%;
+    min-height: 44px;
+    max-height: 120px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-wrapper textarea:focus {
+    border-color: #7c3aed;
+  }
+
+  .input-wrapper textarea::placeholder {
+    color: #555;
+  }
+
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    background: #7c3aed;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover {
+    background: #6d28d9;
+    transform: scale(1.05);
+  }
+
+  .send-btn:active {
+    transform: scale(0.95);
+  }
+
+  .send-btn:disabled {
+    background: #333;
+    color: #555;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ===== Upload Preview ===== */
+  .upload-preview {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+    flex-wrap: wrap;
+  }
+
+  .upload-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .upload-item .remove-btn {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: none;
+    background: #555;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  /* ===== Scrollbar ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .app {
+      border-radius: 0;
+      height: 100vh;
+      width: 100vw;
+    }
+    .sidebar {
+      width: 200px;
+      min-width: 200px;
+    }
+    .message { max-width: 92%; }
+  }
+
+  /* ===== Tooltip ===== */
+  .tooltip {
+    position: relative;
+  }
+
+  .tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #e0e0e0;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .tooltip:hover::after {
+    opacity: 1;
+  }
+
+  /* ===== Empty State ===== */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    gap: 12px;
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  .empty-state-text {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .empty-state-hint {
+    font-size: 13px;
+    color: #444;
+  }
+
+  /* ===== Card Message Demo ===== */
+  .card-message {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+
+  .card-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #2a2a2a;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #ccc;
+    line-height: 1.6;
+  }
+
+  .card-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #2a2a2a;
+    display: flex;
+    gap: 8px;
+  }
+
+  .card-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #7c3aed;
+    background: transparent;
+    color: #a78bfa;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+
+  .card-btn:hover {
+    background: #2d1b69;
+  }
+
+  .card-btn.primary {
+    background: #7c3aed;
+    color: #fff;
+  }
+
+  .card-btn.primary:hover {
+    background: #6d28d9;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Sidebar ===== -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>✦ Hermes Connect</h2>
+      <p>Agent 连接工具</p>
+    </div>
+
+    <div class="profile-list">
+      <div class="profile-item active" onclick="switchProfile(this, '紫灵')">
+        <div class="profile-avatar purple">紫</div>
+        <div class="profile-info">
+          <div class="profile-name">紫灵</div>
+          <div class="profile-desc">需求/创意专家 · 在线</div>
+        </div>
+      </div>
+
+      <div class="profile-item" onclick="switchProfile(this, '如音')">
+        <div class="profile-avatar green">如</div>
+        <div class="profile-info">
+          <div class="profile-name">幸如音</div>
+          <div class="profile-desc">技术实现专家 · 在线</div>
+        </div>
+      </div>
+
+      <div class="profile-item" onclick="switchProfile(this, '思月')">
+        <div class="profile-avatar blue">思</div>
+        <div class="profile-info">
+          <div class="profile-name">文思月</div>
+          <div class="profile-desc">知识管理官 · 在线</div>
+        </div>
+      </div>
+
+      <div class="profile-item" onclick="switchProfile(this, '银月')">
+        <div class="profile-avatar orange">银</div>
+        <div class="profile-info">
+          <div class="profile-name">银月</div>
+          <div class="profile-desc">管家/调度 · 在线</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="settings-btn" title="设置">⚙</button>
+      <div>
+        <span class="status-dot"></span>
+        <span class="status-text">已连接 · 端口 8642</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Main Area ===== -->
+  <div class="main">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div>
+          <div class="chat-profile-name" id="currentProfile">💜 紫灵</div>
+          <div class="chat-profile-status">● 在线 · LanceDB 记忆已加载</div>
+        </div>
+      </div>
+      <div class="chat-header-right">
+        <button class="header-btn tooltip" data-tip="搜索记忆">🔍</button>
+        <button class="header-btn tooltip" data-tip="清空会话">🗑</button>
+        <button class="header-btn tooltip" data-tip="更多">⋯</button>
+      </div>
+    </div>
+
+    <!-- Message List -->
+    <div class="message-list" id="messageList">
+      <div class="date-separator">今天</div>
+
+      <!-- Agent message -->
+      <div class="message agent">
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            你好！我是紫灵，你的需求/创意专家 😏<br><br>
+            有什么想法想跟我聊聊的吗？我可以帮你：
+            <ul style="margin: 8px 0 0 16px; color: #ccc;">
+              <li>挖掘需求细节</li>
+              <li>讨论技术方案</li>
+              <li>输出需求文档</li>
+            </ul>
+          </div>
+          <div class="message-time">14:23:15</div>
+        </div>
+      </div>
+
+      <!-- User message -->
+      <div class="message user">
+        <div class="message-avatar user">你</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            我想做一个跨端Agent连接工具，帮我分析一下可行性？
+          </div>
+          <div class="message-time">14:23:30</div>
+        </div>
+      </div>
+
+      <!-- Agent reply with code block -->
+      <div class="message agent">
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            好问题！我先看看你的服务器资源情况……<br><br>
+            发现一个好消息——<strong>api_server 已经在端口 8642 上运行了</strong> 🎉
+            <pre><code>$ curl http://127.0.0.1:8642/health
+{"status": "ok", "platform": "hermes-agent"}</code></pre>
+            这意味着你不需要任何后端开发，前端直接调就行！
+          </div>
+          <div class="message-time">14:23:45</div>
+        </div>
+      </div>
+
+      <!-- User message with image -->
+      <div class="message user">
+        <div class="message-avatar user">你</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            资源消耗怎么样？帮我看看
+            <div class="image-card">
+              <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); height: 120px; display: flex; align-items: center; justify-content: center; color: #555; font-size: 13px;">
+                📊 服务器监控截图
+              </div>
+            </div>
+          </div>
+          <div class="message-time">14:24:00</div>
+        </div>
+      </div>
+
+      <!-- Agent reply with file card -->
+      <div class="message agent">
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            查到了！给你看看详细数据：
+            <div class="file-card">
+              <div class="file-icon">📄</div>
+              <div class="file-info">
+                <div class="file-name">可行性分析报告-v0.1.md</div>
+                <div class="file-size">10.5 KB · 刚刚生成</div>
+              </div>
+            </div>
+            总结一下：新增只需 <strong>0-50 MB</strong>，现有服务器完全够用 ✅
+          </div>
+          <div class="message-time">14:24:30</div>
+        </div>
+      </div>
+
+      <!-- Agent reply with card message -->
+      <div class="message agent">
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            这是可行性分析的结论卡片：
+            <div class="card-message">
+              <div class="card-header">
+                <span>📋</span> 可行性分析结论
+              </div>
+              <div class="card-body">
+                <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                  <div><span style="color: #22c55e;">●</span> 技术可行</div>
+                  <div><span style="color: #22c55e;">●</span> 资源充足</div>
+                  <div><span style="color: #f59e0b;">●</span> 风险低</div>
+                </div>
+                <div style="font-size: 12px; color: #888;">
+                  MVP 预估：6.5 天 · 三端覆盖：+3 天
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn primary">查看详情</button>
+                <button class="card-btn">导出 PDF</button>
+              </div>
+            </div>
+          </div>
+          <div class="message-time">14:25:00</div>
+        </div>
+      </div>
+
+      <!-- Streaming indicator -->
+      <div class="message agent">
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble" style="background: #252525; min-width: 160px;">
+            <div class="streaming-indicator">
+              <div class="streaming-dots">
+                <span class="streaming-dot"></span>
+                <span class="streaming-dot"></span>
+                <span class="streaming-dot"></span>
+              </div>
+              <span class="streaming-text">Agent 正在思考...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="upload-preview" id="uploadPreview" style="display: none;">
+        <div class="upload-item">
+          <span>📄</span> 架构图.png
+          <button class="remove-btn">×</button>
+        </div>
+      </div>
+
+      <div class="input-toolbar">
+        <button class="toolbar-btn tooltip" data-tip="上传文件" onclick="toggleUpload()" id="uploadBtn">📎</button>
+        <button class="toolbar-btn tooltip" data-tip="截屏">📷</button>
+        <button class="toolbar-btn tooltip" data-tip="快捷指令">⚡</button>
+        <button class="toolbar-btn tooltip" data-tip="格式化">🎨</button>
+        <div style="flex:1"></div>
+        <span style="font-size:11px; color:#555;">Ctrl+Enter 发送</span>
+      </div>
+
+      <div class="input-row">
+        <div class="input-wrapper">
+          <textarea id="chatInput" placeholder="给紫灵发消息..." rows="1" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchProfile(el, name) {
+    document.querySelectorAll('.profile-item').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('currentProfile').textContent = 
+      name === '紫灵' ? '💜 紫灵' :
+      name === '如音' ? '💚 幸如音' :
+      name === '思月' ? '💙 文思月' : '🧡 银月';
+  }
+
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  }
+
+  function toggleUpload() {
+    const btn = document.getElementById('uploadBtn');
+    const preview = document.getElementById('uploadPreview');
+    btn.classList.toggle('active');
+    preview.style.display = btn.classList.contains('active') ? 'flex' : 'none';
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const list = document.getElementById('messageList');
+    const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user';
+    userMsg.innerHTML = `
+      <div class="message-avatar user">你</div>
+      <div class="message-body">
+        <div class="message-bubble">${escapeHtml(text)}</div>
+        <div class="message-time">${time}</div>
+      </div>
+    `;
+
+    // Remove streaming indicator if it's the last
+    const lastMsg = list.lastElementChild;
+    if (lastMsg && lastMsg.querySelector('.streaming-indicator')) {
+      lastMsg.remove();
+    }
+
+    list.appendChild(userMsg);
+
+    // Add streaming indicator
+    const streamMsg = document.createElement('div');
+    streamMsg.className = 'message agent';
+    streamMsg.innerHTML = `
+      <div class="message-avatar agent">紫</div>
+      <div class="message-body">
+        <div class="message-bubble" style="min-width: 160px;">
+          <div class="streaming-indicator">
+            <div class="streaming-dots">
+              <span class="streaming-dot"></span>
+              <span class="streaming-dot"></span>
+              <span class="streaming-dot"></span>
+            </div>
+            <span class="streaming-text">Agent 正在思考...</span>
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(streamMsg);
+    list.scrollTop = list.scrollHeight;
+
+    // Simulate response after 1.5s
+    setTimeout(() => {
+      streamMsg.remove();
+      const reply = document.createElement('div');
+      reply.className = 'message agent';
+      reply.innerHTML = `
+        <div class="message-avatar agent">紫</div>
+        <div class="message-body">
+          <div class="message-bubble">
+            收到！让我想想怎么回答你 😏<br><br>
+            你的问题是：<em>${escapeHtml(text)}</em><br><br>
+            这个方案完全可行，建议我们先做 Web MVP，再铺到 PC 和移动端。
+          </div>
+          <div class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour12: false })}</div>
+        </div>
+      `;
+      list.appendChild(reply);
+      list.scrollTop = list.scrollHeight;
+    }, 1500);
+
+    input.value = '';
+    input.style.height = '44px';
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Enter to send, Ctrl+Enter for newline
+  document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+</script>
+</body>
+</html>
