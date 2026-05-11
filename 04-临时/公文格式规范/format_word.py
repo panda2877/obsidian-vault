@@ -528,13 +528,33 @@ def _format_tables(doc):
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
 
-    # 确保 Table Grid 样式存在
     style_name = 'Table Grid'
+
+    # 检查 Table Grid 是否存在，不存在则手动创建
     if style_name in [s.name for s in doc.styles]:
         table_grid = doc.styles[style_name]
     else:
-        print("  ⚠️ Table Grid 样式不存在，跳过表格格式化。")
-        return
+        # 手动创建 Table Grid 样式
+        from docx.enum.style import WD_STYLE_TYPE
+
+        style = doc.styles.add_style(style_name, WD_STYLE_TYPE.TABLE)
+        tblPr = style.element.find(qn('w:tblPr'))
+        if tblPr is None:
+            tblPr = OxmlElement('w:tblPr')
+            style.element.insert(0, tblPr)
+
+        # 边框定义
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            edge_el = OxmlElement(f'w:{edge}')
+            edge_el.set(qn('w:val'), 'single')
+            edge_el.set(qn('w:sz'), '4')
+            edge_el.set(qn('w:space'), '0')
+            edge_el.set(qn('w:color'), 'auto')
+            borders.append(edge_el)
+        tblPr.append(borders)
+
+        table_grid = style
 
     for table in doc.tables:
         table.style = table_grid
