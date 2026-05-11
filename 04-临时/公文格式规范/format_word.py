@@ -173,9 +173,6 @@ def is_title_candidate(text):
         return False
     if text.endswith('：'):
         return False
-    # 排除图片/表格标题（图1、表1、Fig 1、Table 1 等）
-    if re.match(r'^(图|表|Fig|Table)\s*\d', text):
-        return False
     return True
 
 
@@ -231,10 +228,10 @@ class TitleCandidate:
 
 def _get_paragraph_numbering(para):
     """
-    检测段落是否有 Word 自动编号，返回编号文本（如 "一、" "1." "（1）"）。
+    检测段落是否有 Word 自动编号。
 
-    Word 的自动编号存储在 w:pPr/w:numPr 中，编号文本由编号定义决定。
-    这里通过检查 numPr 元素来判断是否有自动编号。
+    返回风格标识字符串（如 'auto_3_0' = numId=3, ilvl=0），
+    无自动编号时返回 None。
     """
     pPr = para._element.find(qn('w:pPr'))
     if pPr is None:
@@ -242,15 +239,44 @@ def _get_paragraph_numbering(para):
     numPr = pPr.find(qn('w:numPr'))
     if numPr is None:
         return None
-    # 有自动编号，但无法直接获取编号文本（需要解析 numbering.xml）
-    # 返回标记让调用方知道这是有编号的段落
-    return '<auto_numbering>'
+
+    numId_el = numPr.find(qn('w:numId'))
+    ilvl_el = numPr.find(qn('w:ilvl'))
+    num_id = numId_el.get(qn('w:val')) if numId_el is not None else '0'
+    ilvl = ilvl_el.get(qn('w:val')) if ilvl_el is not None else '0'
+    return f'auto_{num_id}_{ilvl}'
+
+
+def _find_image_paragraphs(doc):
+    """
+    找出所有包含图片的段落，返回这些段落 element 的集合。
+
+    检测 w:drawing 和 w:pict 元素（Word 内嵌图片的两种存储方式）。
+    """
+    image_paras = set()
+    for para in doc.paragraphs:
+        drawing = para._element.findall('.//' + qn('w:drawing'))
+        pict = para._element.findall('.//' + qn('w:pict'))
+        if drawing or pict:
+            image_paras.add(para._element)
+    return image_paras
 
 
 def collect_candidates(doc, title_para):
     """
-    收集文档中所有标题候选（排除文档标题和 TOC）。
+    收集文档中所有标题候选（排除文档标题、TOC 和图片相邻段落）。
     """
+    # 预扫描：找出所有图片段落及其前后相邻段落
+    image_paras = _find_image_paragraphs(doc)
+    adjacent_to_image = set()
+    all_paras = list(doc.paragraphs)
+    for i, para in enumerate(all_paras):
+        if para._element in image_paras:
+            if i > 0:
+                adjacent_to_image.add(all_paras[i - 1]._element)
+            if i + 1 < len(all_paras):
+                adjacent_to_image.add(all_paras[i + 1]._element)
+
     candidates = []
     for para in doc.paragraphs:
         text = para.text.strip()
@@ -260,6 +286,12 @@ def collect_candidates(doc, title_para):
             continue
         if title_para is not None and para._element is title_para._element:
             continue
+        # 跳过图片相邻段落（图题/表题/图示说明）
+        if para._element in adjacent_to_image:
+            continue
+        # 跳过自身包含图片的段落
+        if para._element in image_paras:
+            continue
         if not is_title_candidate(text):
             continue
 
@@ -267,11 +299,10 @@ def collect_candidates(doc, title_para):
 
         # 如果纯文本无编号，检查是否有 Word 自动编号
         if style_key is None:
-            num_text = _get_paragraph_numbering(para)
-            if num_text:
-                # 用自动编号标记，但无法精确分类 → 用通用编号风格
-                style_key = 'auto_num'
-                prefix = num_text
+            num_key = _get_paragraph_numbering(para)
+            if num_key:
+                style_key = num_key
+                prefix = f'[{num_key}]'
 
         candidates.append(TitleCandidate(para, text, style_key, prefix))
 
