@@ -109,15 +109,6 @@ LINE_SPACING_FIXED = Pt(28)
 # 首行缩进 2 字符（三号字 16pt，2 字符 ≈ 32pt）
 FIRST_LINE_INDENT = Pt(32)
 
-# 公文标题常见关键词（用于标题评分）
-TITLE_KEYWORDS = [
-    '关于', '报告', '通知', '方案', '印发', '转发', '批复',
-    '意见', '办法', '规定', '决定', '通报', '公告', '通告',
-    '请示', '函', '纪要', '总结', '计划', '规划', '安排',
-    '实施', '细则', '条例', '指示', '命令', '决议',
-]
-
-
 # ═══════════════════════════════════════════════════════════════════
 # 层级标题检测
 # ═══════════════════════════════════════════════════════════════════
@@ -125,6 +116,10 @@ TITLE_KEYWORDS = [
 def detect_level(text):
     """
     根据段落文本检测标题层级。
+
+    规则：
+    - 标题段落不得包含句号、感叹号、问号（。！？）
+    - 匹配序号模式后，若含上述标点则降为正文
 
     返回：
         'h1'     — 一级标题：一、 二、 三、 ……
@@ -137,6 +132,10 @@ def detect_level(text):
     text = text.strip()
     if not text:
         return None
+
+    # 标题段落不得包含句号感叹号问号
+    if re.search(r'[。！？]', text):
+        return 'body'
 
     # 一级标题：中文数字 + "、"
     if re.match(r'^[一二三四五六七八九十百千]+、', text):
@@ -158,7 +157,7 @@ def detect_level(text):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 标题预扫描（v2 新增）
+# 标题预扫描
 # ═══════════════════════════════════════════════════════════════════
 
 def _is_toc_paragraph(para):
@@ -177,98 +176,28 @@ def _is_toc_paragraph(para):
     return False
 
 
-def _title_score(text, total_paras, para_index):
-    """
-    给一个段落文本打"标题分"，分数越高越像文档标题。
-
-    评分因子：
-      +5  包含公文关键词（关于、报告、通知……）
-      +3  长度在 10~60 字之间
-      +2  不以 。！？，、；结尾
-      +1  在文档前 30% 的位置
-      -5  少于 8 个字
-      -3  以 。！？结尾
-      -2  以"的"结尾（"的"结尾通常是描述性文字）
-    """
-    score = 0
-    text = text.strip()
-
-    # 长度
-    length = len(text)
-    if 10 <= length <= 60:
-        score += 3
-    elif length < 8:
-        score -= 5
-    elif length > 100:
-        score -= 1  # 太长的也不太像标题
-
-    # 公文关键词
-    for kw in TITLE_KEYWORDS:
-        if kw in text:
-            score += 5
-            break
-
-    # 结尾标点
-    if text.endswith(('。', '！', '？')):
-        score -= 3
-    elif text.endswith(('，', '、', '；')):
-        score -= 2
-    else:
-        score += 2
-
-    # 以"的"结尾 → 通常是描述性文字
-    if text.endswith('的'):
-        score -= 2
-
-    # 位置靠前加分
-    if total_paras > 0 and para_index / total_paras < 0.3:
-        score += 1
-
-    return score
-
-
 def find_title_paragraph(doc):
     """
-    第一遍扫描：遍历全文，找出最像文档标题的段落。
+    第一遍扫描：找文档标题。
 
-    返回：
-        (paragraph, text) — 标题段落对象和文本
-        如果找不到合适的，返回 (None, None)
+    规则：第一段不含句号感叹号问号的非空文本段落即为标题。
+    （跳过 Word 自动目录段落）
     """
-    candidates = []
-    all_paras = list(doc.paragraphs)
-    total = len(all_paras)
-
-    for i, para in enumerate(all_paras):
+    for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
             continue
-
-        # 跳过目录段落
         if _is_toc_paragraph(para):
             continue
 
-        # 跳过匹配标题模式的段落（序号段落不会是文档标题）
-        if detect_level(text) != 'body':
-            continue
+        # 第一段有效文本
+        if not re.search(r'[。！？]', text):
+            return para, text
+        else:
+            # 第一段就含句号 → 文档没有明确的标题
+            return None, None
 
-        score = _title_score(text, total, i)
-        candidates.append((score, i, para, text))
-
-    if not candidates:
-        return None, None
-
-    # 按分数降序排列
-    candidates.sort(key=lambda x: x[0], reverse=True)
-
-    # 取最高分
-    best_score, best_idx, best_para, best_text = candidates[0]
-
-    # 分数 <= 0 说明没有段落像标题，返回 None
-    if best_score <= 0:
-        return None, None
-
-    return best_para, best_text
+    return None, None
 
 
 # ═══════════════════════════════════════════════════════════════════
