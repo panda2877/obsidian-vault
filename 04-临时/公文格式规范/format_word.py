@@ -19,7 +19,8 @@ v4 改进：
   - 自动编号 → 纯文本（兼容 Word 自动编号列表）
   - 按规范重写编号：一、→（一）→ 1. →（1）
   - 移除正文空行
-  - 表格统一样式：单实线边框，表头灰色
+  - 表格应用 Table Grid 内置样式，表头灰色
+  - 预处理：全文去加粗
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -480,6 +481,27 @@ def _convert_auto_numbering_to_text(doc):
         pPr.remove(numPr)
 
 
+def _remove_all_bold(doc):
+    """预处理：移除全文所有加粗格式。"""
+    removed = 0
+    for para in doc.paragraphs:
+        for run in para.runs:
+            if run.font.bold:
+                run.font.bold = False
+                removed += 1
+    # 也处理表格中的文本
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    for run in para.runs:
+                        if run.font.bold:
+                            run.font.bold = False
+                            removed += 1
+    if removed > 0:
+        print(f"  已移除 {removed} 处加粗格式。")
+
+
 def _remove_empty_paragraphs(doc):
     """移除所有空段落（正文中的空行），保留含图片的段落。"""
     image_paras = _find_image_paragraphs(doc)
@@ -502,32 +524,20 @@ def _remove_empty_paragraphs(doc):
 
 
 def _format_tables(doc):
-    """统一表格样式：单实线边框，表头灰色背景。"""
+    """统一表格样式：应用 Table Grid 内置样式，表头灰色背景。"""
     from docx.oxml import OxmlElement
-    from docx.oxml.ns import qn, nsdecls
-    from lxml import etree
+    from docx.oxml.ns import qn
+
+    # 确保 Table Grid 样式存在
+    style_name = 'Table Grid'
+    if style_name in [s.name for s in doc.styles]:
+        table_grid = doc.styles[style_name]
+    else:
+        print("  ⚠️ Table Grid 样式不存在，跳过表格格式化。")
+        return
 
     for table in doc.tables:
-        # ── 设置表格边框：单实线 ──
-        tblPr = table._tbl.find(qn('w:tblPr'))
-        if tblPr is None:
-            tblPr = OxmlElement('w:tblPr')
-            table._tbl.insert(0, tblPr)
-
-        # 移除旧边框定义
-        old_borders = tblPr.find(qn('w:tblBorders'))
-        if old_borders is not None:
-            tblPr.remove(old_borders)
-
-        borders = OxmlElement('w:tblBorders')
-        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
-            edge_el = OxmlElement(f'w:{edge}')
-            edge_el.set(qn('w:val'), 'single')
-            edge_el.set(qn('w:sz'), '4')       # 0.5pt
-            edge_el.set(qn('w:space'), '0')
-            edge_el.set(qn('w:color'), '000000')
-            borders.append(edge_el)
-        tblPr.append(borders)
+        table.style = table_grid
 
         # ── 表头（第一行）灰色背景 ──
         if table.rows:
@@ -536,14 +546,13 @@ def _format_tables(doc):
                 if tcPr is None:
                     tcPr = OxmlElement('w:tcPr')
                     cell._tc.insert(0, tcPr)
-                # 移除旧 shading
                 old_shd = tcPr.find(qn('w:shd'))
                 if old_shd is not None:
                     tcPr.remove(old_shd)
                 shd = OxmlElement('w:shd')
                 shd.set(qn('w:val'), 'clear')
                 shd.set(qn('w:color'), 'auto')
-                shd.set(qn('w:fill'), 'D9D9D9')  # 浅灰
+                shd.set(qn('w:fill'), 'D9D9D9')
                 tcPr.append(shd)
 
     print(f"  已格式化 {len(doc.tables)} 个表格。")
@@ -914,9 +923,10 @@ def format_document(doc):
     第二遍：收集标题候选，递归分配层级。
     第三遍：逐段应用格式。
     """
-    # ── 第零遍：预处理——自动编号转纯文本 ──
+    # ── 第零遍：预处理——自动编号转纯文本 + 全文去加粗 ──
     _convert_auto_numbering_to_text(doc)
     print("  自动编号已转为纯文本。")
+    _remove_all_bold(doc)
 
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
