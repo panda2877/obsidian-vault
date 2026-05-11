@@ -464,17 +464,6 @@ def _convert_auto_numbering_to_text(doc):
         # 移除自动编号（w:numPr）
         pPr.remove(numPr)
 
-        # 在段落 element 上存储原始自动编号信息，供后续检测使用
-        para._element.set(qn('w:numId'), num_id)
-
-
-def _get_stored_numbering(para):
-    """读取预处理阶段存储的原始自动编号信息。"""
-    val = para._element.get(qn('w:numId'))
-    if val:
-        return f'auto_{val}_0'
-    return None
-
 
 def _find_image_paragraphs(doc):
     """找出所有包含图片的段落，返回这些段落 element 的集合。"""
@@ -542,15 +531,7 @@ def collect_candidates(doc, title_para):
 
             style_key, prefix = classify_numbering(text)
 
-            # 如果段落原来有自动编号（预处理阶段已转为纯文本），
-            # 使用原始自动编号作为 style_key，区分不同来源的编号
-            # 注意：自动编号作用于整个段落，只影响第一行
-            stored_key = _get_stored_numbering(para) if line_idx == 0 else None
-            if stored_key:
-                style_key = stored_key
-                prefix = f'[{stored_key}]'
-
-            # 如果纯文本无编号，且无原始自动编号，检查是否有 Word 自动编号
+            # 如果纯文本无编号，检查是否有 Word 自动编号（仅限预处理未覆盖的情况）
             if style_key is None:
                 num_key = _get_paragraph_numbering(para)
                 if num_key:
