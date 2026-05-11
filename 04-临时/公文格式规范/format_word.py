@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-Word 文档格式化工具 — 公文格式规范版（v2 智能标题识别）
+Word 文档格式化工具 — 公文格式规范版（v3 动态层级识别）
 ========================================================
 根据党政机关公文格式规范，自动格式化 Word 文档。
 
 格式规范：
   • 标题：     方正小标宋_GBK 二号（22pt），居中
-  • 一级标题： 黑体 三号（16pt），中文数字+"、"
-  • 二级标题： 楷体_GB2312 三号（16pt），"(中文数字）"
-  • 三级标题： 仿宋_GB2312 三号（16pt），阿拉伯数字+"."
-  • 四级标题： 仿宋_GB2312 三号（16pt），"(阿拉伯数字）"
+  • 一级标题： 黑体 三号（16pt），加粗
+  • 二级标题： 楷体_GB2312 三号（16pt）
+  • 三级标题： 仿宋_GB2312 三号（16pt）
+  • 四级标题： 仿宋_GB2312 三号（16pt）
   • 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
 
-层次规则：按顺序使用，可跳跃不可逆序。
-
-v2 改进：
-  - 全文预扫描识别标题（不再简单取"第一个非序号段落"）
-  - 跳过 Word 自动目录
-  - 层级状态机跟踪上下文
+v3 改进：
+  - 不再硬编码编号格式，而是动态分析文档中的编号风格
+  - 同风格编号 = 同层级，不同风格 = 不同层级
+  - 无编号标题 = 最深编号层级 + 1
+  - 标题候选条件：不含 。！？、长度 ≤ 60、不以 ：结尾
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -109,55 +108,94 @@ LINE_SPACING_FIXED = Pt(28)
 # 首行缩进 2 字符（三号字 16pt，2 字符 ≈ 32pt）
 FIRST_LINE_INDENT = Pt(32)
 
+# 标题候选最大长度
+MAX_TITLE_LENGTH = 60
+
+
 # ═══════════════════════════════════════════════════════════════════
-# 层级标题检测
+# 编号风格分类
 # ═══════════════════════════════════════════════════════════════════
 
-def detect_level(text):
+def classify_numbering(text):
     """
-    根据段落文本检测标题层级。
+    提取段落文本的编号风格。
 
-    规则：
-    - 标题段落不得包含句号、感叹号、问号（。！？）
-    - 匹配序号模式后，若含上述标点则降为正文
+    返回 (style_key, prefix_text)：
+      style_key  — 用于聚类同层标题的标识
+      prefix_text — 编号前缀原文（如 "一、" "（一）" "1."）
+    无编号时返回 (None, None)。
+    """
+    # 中文数字 + 、．.
+    m = re.match(r'^([一二三四五六七八九十百千]+[、．.])', text)
+    if m:
+        return ('chinese_dot', m.group(1))
 
-    返回：
-        'h1'     — 一级标题：一、 二、 三、 ……
-        'h2'     — 二级标题：（一）（二）（三）……
-        'h3'     — 三级标题：1. 2. 3. ……
-        'h4'     — 四级标题：(1) (2) (3) ……
-        'body'   — 正文
-        None     — 空段落
+    # 全角括号 + 中文数字
+    m = re.match(r'^（([一二三四五六七八九十百千]+)）', text)
+    if m:
+        return ('chinese_bracket_full', f'（{m.group(1)}）')
+
+    # 半角括号 + 中文数字
+    m = re.match(r'^\(([一二三四五六七八九十百千]+)\)', text)
+    if m:
+        return ('chinese_bracket_half', f'({m.group(1)})')
+
+    # 第X章/条/节/项/款
+    m = re.match(r'^(第[一二三四五六七八九十百千\d]+[章条节项款])', text)
+    if m:
+        return ('chapter', m.group(1))
+
+    # 多级编号 1.1, 2.3.1（需在 arabic_dot 之前检查）
+    m = re.match(r'^(\d+\.\d+)', text)
+    if m:
+        return ('arabic_multi', m.group(1))
+
+    # 阿拉伯数字 + ．.、)
+    m = re.match(r'^(\d+[．.、)])', text)
+    if m:
+        return ('arabic_dot', m.group(1))
+
+    # 全角括号 + 阿拉伯数字
+    m = re.match(r'^（(\d+)）', text)
+    if m:
+        return ('arabic_bracket_full', f'（{m.group(1)}）')
+
+    # 半角括号 + 阿拉伯数字
+    m = re.match(r'^\((\d+)\)', text)
+    if m:
+        return ('arabic_bracket_half', f'({m.group(1)})')
+
+    return (None, None)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 标题候选判断
+# ═══════════════════════════════════════════════════════════════════
+
+def is_title_candidate(text):
+    """
+    判断一段文本是否为标题候选。
+
+    条件：
+    1. 非空
+    2. 不含句号、感叹号、问号（。！？）
+    3. 长度 ≤ MAX_TITLE_LENGTH
+    4. 不以冒号结尾（"通知如下："这类过渡句排除）
     """
     text = text.strip()
     if not text:
-        return None
-
-    # 标题段落不得包含句号感叹号问号
+        return False
     if re.search(r'[。！？]', text):
-        return 'body'
-
-    # 一级标题：中文数字 + "、"
-    if re.match(r'^[一二三四五六七八九十百千]+、', text):
-        return 'h1'
-
-    # 二级标题："（" + 中文数字 + "）"
-    if re.match(r'^（[一二三四五六七八九十百千]+）', text):
-        return 'h2'
-
-    # 三级标题：阿拉伯数字 + "."（后面有空格）
-    if re.match(r'^\d+\.\s', text):
-        return 'h3'
-
-    # 四级标题："(" + 阿拉伯数字 + ")"
-    if re.match(r'^\(\d+\)', text):
-        return 'h4'
-
-    return 'body'
+        return False
+    if len(text) > MAX_TITLE_LENGTH:
+        return False
+    if text.endswith('：'):
+        return False
+    return True
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 标题预扫描
+# 辅助函数
 # ═══════════════════════════════════════════════════════════════════
 
 def _is_toc_paragraph(para):
@@ -165,7 +203,6 @@ def _is_toc_paragraph(para):
     style = para.style
     if style and style.name and style.name.startswith('TOC'):
         return True
-    # 也检查 XML 中的样式 ID
     pPr = para._element.find(qn('w:pPr'))
     if pPr is not None:
         pStyle = pPr.find(qn('w:pStyle'))
@@ -178,7 +215,7 @@ def _is_toc_paragraph(para):
 
 def find_title_paragraph(doc):
     """
-    第一遍扫描：找文档标题。
+    找文档标题。
 
     规则：第一段不含句号感叹号问号的非空文本段落即为标题。
     （跳过 Word 自动目录段落）
@@ -189,15 +226,67 @@ def find_title_paragraph(doc):
             continue
         if _is_toc_paragraph(para):
             continue
-
-        # 第一段有效文本
         if not re.search(r'[。！？]', text):
             return para, text
         else:
-            # 第一段就含句号 → 文档没有明确的标题
             return None, None
-
     return None, None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 层级映射构建（v3 核心）
+# ═══════════════════════════════════════════════════════════════════
+
+def build_level_map(doc, title_para):
+    """
+    扫描全文，构建编号风格 → 层级映射。
+
+    规则：
+    - 按首次出现顺序分配 h1/h2/h3/h4
+    - 同风格编号 = 同层级
+    - 不同风格 = 不同层级
+
+    返回：
+        level_map: {style_key: level_name}
+        unnumbered_level: 无编号标题的默认层级
+    """
+    style_order = []
+    seen_styles = set()
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+        if _is_toc_paragraph(para):
+            continue
+        # 跳过文档标题段落
+        if title_para is not None and para._element is title_para._element:
+            continue
+        if not is_title_candidate(text):
+            continue
+
+        style_key, _ = classify_numbering(text)
+        if style_key and style_key not in seen_styles:
+            seen_styles.add(style_key)
+            style_order.append(style_key)
+
+    # 分配层级
+    level_names = ['h1', 'h2', 'h3', 'h4']
+    level_map = {}
+    for i, style_key in enumerate(style_order):
+        if i < 4:
+            level_map[style_key] = level_names[i]
+
+    # 无编号标题的默认层级 = 最深编号层级 + 1
+    num_levels = len(style_order)
+    if num_levels == 0:
+        unnumbered_level = 'h1'
+    elif num_levels >= 4:
+        unnumbered_level = 'h4'
+    else:
+        unnumbered_level = level_names[num_levels]
+
+    return level_map, unnumbered_level
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -215,9 +304,9 @@ def _set_run_font(run, font_name, font_size, bold=False):
         rFonts = OxmlElement('w:rFonts')
         rPr.insert(0, rFonts)
 
-    rFonts.set(qn('w:eastAsia'), font_name)  # 中文字体
-    rFonts.set(qn('w:ascii'), font_name)     # 西文字体
-    rFonts.set(qn('w:hAnsi'), font_name)     # 西文字体（ANSI）
+    rFonts.set(qn('w:eastAsia'), font_name)
+    rFonts.set(qn('w:ascii'), font_name)
+    rFonts.set(qn('w:hAnsi'), font_name)
 
 
 def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_indent=None):
@@ -249,47 +338,43 @@ def apply_style(paragraph, level):
     bold = FONT_BOLD[level]
     alignment = ALIGNMENT[level]
 
-    # 正文需要行距和缩进，标题不需要
     if level == 'body':
         _set_paragraph_format(paragraph, alignment, LINE_SPACING_FIXED, FIRST_LINE_INDENT)
     else:
         _set_paragraph_format(paragraph, alignment)
 
-    # 遍历所有 run 设置字体
     for run in paragraph.runs:
         _set_run_font(run, font_name, font_size, bold)
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 主流程（v2 重写）
+# 主流程（v3 重写）
 # ═══════════════════════════════════════════════════════════════════
-
-# 层级数值映射（用于状态机比较）
-LEVEL_NUM = {
-    'title': 0,
-    'h1':    1,
-    'h2':    2,
-    'h3':    3,
-    'h4':    4,
-    'body':  5,
-}
-
 
 def format_document(doc):
     """
     两遍扫描格式化文档。
 
-    第一遍：全文预扫描，智能识别标题。
-    第二遍：逐段格式化，带层级状态机跟踪上下文。
+    第一遍：找文档标题 + 构建编号风格→层级映射。
+    第二遍：逐段格式化。
     """
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
     if title_para is not None:
         print(f"  识别标题：「{title_text[:40]}{'…' if len(title_text) > 40 else ''}」")
 
+    # ── 第一遍：构建层级映射 ──
+    level_map, unnumbered_level = build_level_map(doc, title_para)
+    if level_map:
+        print(f"  识别到 {len(level_map)} 种编号风格：")
+        for style_key, level in level_map.items():
+            print(f"    {style_key} → {level}")
+        print(f"  无编号标题 → {unnumbered_level}")
+    else:
+        print("  未识别到编号标题，所有标题候选视为 h1")
+
     # ── 第二遍：逐段格式化 ──
-    current_level = 'body'  # 当前所处的层级上下文
-    title_applied = False   # 标题是否已应用
+    title_applied = False
 
     for para in doc.paragraphs:
         text = para.text.strip()
@@ -301,27 +386,16 @@ def format_document(doc):
             continue
 
         # ── 判断层级 ──
-        # 如果这个段落是识别出的标题（通过底层 XML 元素匹配）
         if not title_applied and title_para is not None and para._element is title_para._element:
             level = 'title'
             title_applied = True
+        elif is_title_candidate(text):
+            style_key, _ = classify_numbering(text)
+            if style_key and style_key in level_map:
+                level = level_map[style_key]
+            else:
+                level = unnumbered_level
         else:
-            level = detect_level(text)
-
-        # ── 层级状态机 ──
-        if level != 'body':
-            # 这是一个标题段落
-            level_num = LEVEL_NUM[level]
-            current_num = LEVEL_NUM[current_level]
-
-            if level_num < current_num:
-                # 回到更高级别（如 h3 → h1），新章节开始，允许
-                pass
-            # 同级或更深，都允许
-
-            current_level = level
-        else:
-            # 正文段落
             level = 'body'
 
         apply_style(para, level)
@@ -354,7 +428,6 @@ def main():
         input("\n按 Enter 键退出……")
         sys.exit(1)
 
-    # 输出路径
     if len(sys.argv) >= 3:
         output_path = sys.argv[2]
     else:
