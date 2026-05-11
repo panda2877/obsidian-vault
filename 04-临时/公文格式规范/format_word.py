@@ -162,7 +162,8 @@ def is_title_candidate(text):
     2. 不含 。！？
     3. 长度 ≤ MAX_TITLE_LENGTH
     4. 不以 ：结尾
-    5. 不以 图/表/Fig/Table 开头（图片/表格标题）
+
+    注：传入 text 应为段落的第一行（不含换行后的正文）。
     """
     text = text.strip()
     if not text:
@@ -279,8 +280,8 @@ def collect_candidates(doc, title_para):
 
     candidates = []
     for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
+        full_text = para.text.strip()
+        if not full_text:
             continue
         if _is_toc_paragraph(para):
             continue
@@ -292,10 +293,13 @@ def collect_candidates(doc, title_para):
         # 跳过自身包含图片的段落
         if para._element in image_paras:
             continue
-        if not is_title_candidate(text):
+
+        # 只取段落第一行作为标题候选（换行后的是正文）
+        first_line = full_text.split('\n')[0].strip()
+        if not is_title_candidate(first_line):
             continue
 
-        style_key, prefix = classify_numbering(text)
+        style_key, prefix = classify_numbering(first_line)
 
         # 如果纯文本无编号，检查是否有 Word 自动编号
         if style_key is None:
@@ -304,7 +308,7 @@ def collect_candidates(doc, title_para):
                 style_key = num_key
                 prefix = f'[{num_key}]'
 
-        candidates.append(TitleCandidate(para, text, style_key, prefix))
+        candidates.append(TitleCandidate(para, first_line, style_key, prefix))
 
     return candidates
 
