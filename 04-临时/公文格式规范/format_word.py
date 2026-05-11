@@ -217,14 +217,56 @@ def find_title_paragraph(doc):
 
 class TitleCandidate:
     """标题候选，存储段落信息和分配结果。"""
-    __slots__ = ('para', 'text', 'style_key', 'prefix', 'level')
+    __slots__ = ('para', 'text', 'style_key', 'prefix', 'level', 'line_idx', 'run_indices')
 
-    def __init__(self, para, text, style_key, prefix):
+    def __init__(self, para, text, style_key, prefix, line_idx=0, run_indices=None):
         self.para = para
         self.text = text
         self.style_key = style_key
         self.prefix = prefix
         self.level = None  # 由递归算法分配
+        self.line_idx = line_idx  # 段落内行号（0=第一行）
+        self.run_indices = run_indices or []  # 该行包含的 run 索引列表
+
+
+def _group_runs_by_line(para):
+    """
+    将段落中的 runs 按行分组。
+
+    返回 [(line_text, [run_index, ...]), ...]
+    每个 tuple 对应一行：文本内容 + 该行包含的 run 索引列表。
+    """
+    lines = []
+    current_runs = []
+    current_text = []
+
+    for i, run in enumerate(para.runs):
+        has_br = run._element.find(qn('w:br')) is not None
+        if has_br:
+            if current_text:
+                lines.append((''.join(current_text), current_runs))
+            current_runs = []
+            current_text = []
+            continue
+
+        text = run.text
+        while '\n' in text:
+            idx = text.index('\n')
+            current_text.append(text[:idx])
+            current_runs.append(i)
+            lines.append((''.join(current_text), current_runs))
+            current_runs = []
+            current_text = []
+            text = text[idx + 1:]
+
+        if text:
+            current_text.append(text)
+            current_runs.append(i)
+
+    if current_text:
+        lines.append((''.join(current_text), current_runs))
+
+    return lines
 
 
 def _get_paragraph_numbering(para):
@@ -249,11 +291,7 @@ def _get_paragraph_numbering(para):
 
 
 def _find_image_paragraphs(doc):
-    """
-    找出所有包含图片的段落，返回这些段落 element 的集合。
-
-    检测 w:drawing 和 w:pict 元素（Word 内嵌图片的两种存储方式）。
-    """
+    """找出所有包含图片的段落，返回这些段落 element 的集合。"""
     image_paras = set()
     for para in doc.paragraphs:
         drawing = para._element.findall('.//' + qn('w:drawing'))
@@ -265,18 +303,31 @@ def _find_image_paragraphs(doc):
 
 def collect_candidates(doc, title_para):
     """
-    收集文档中所有标题候选（排除文档标题、TOC 和图片相邻段落）。
+    收集文档中所有标题候选（按行检测，排除 TOC 和图片题注）。
     """
-    # 预扫描：找出所有图片段落及其前后相邻段落
+    # 预扫描：找出所有图片段落
     image_paras = _find_image_paragraphs(doc)
-    adjacent_to_image = set()
     all_paras = list(doc.paragraphs)
+
+    # 找出需要排除的图片题注段落：
+    # 单行 + 与图片段落相邻（不论是否有自动编号）
+    caption_paras = set()
     for i, para in enumerate(all_paras):
         if para._element in image_paras:
             if i > 0:
-                adjacent_to_image.add(all_paras[i - 1]._element)
+                prev = all_paras[i - 1]
+                text = prev.text.strip()
+                if text:
+                    lines = text.split('\n')
+                    if len(lines) == 1:
+                        caption_paras.add(prev._element)
             if i + 1 < len(all_paras):
-                adjacent_to_image.add(all_paras[i + 1]._element)
+                nxt = all_paras[i + 1]
+                text = nxt.text.strip()
+                if text:
+                    lines = text.split('\n')
+                    if len(lines) == 1:
+                        caption_paras.add(nxt._element)
 
     candidates = []
     for para in doc.paragraphs:
@@ -287,28 +338,35 @@ def collect_candidates(doc, title_para):
             continue
         if title_para is not None and para._element is title_para._element:
             continue
-        # 跳过图片相邻段落（图题/表题/图示说明）
-        if para._element in adjacent_to_image:
-            continue
-        # 跳过自身包含图片的段落
-        if para._element in image_paras:
-            continue
 
-        # 只取段落第一行作为标题候选（换行后的是正文）
-        first_line = full_text.split('\n')[0].strip()
-        if not is_title_candidate(first_line):
-            continue
+        # 按行分组
+        line_groups = _group_runs_by_line(para)
 
-        style_key, prefix = classify_numbering(first_line)
+        for line_idx, (line_text, run_idxs) in enumerate(line_groups):
+            text = line_text.strip()
+            if not text:
+                continue
 
-        # 如果纯文本无编号，检查是否有 Word 自动编号
-        if style_key is None:
-            num_key = _get_paragraph_numbering(para)
-            if num_key:
-                style_key = num_key
-                prefix = f'[{num_key}]'
+            # 跳过图片题注（单行 + 无编号 + 与图片相邻）
+            if para._element in caption_paras and len(line_groups) == 1:
+                continue
 
-        candidates.append(TitleCandidate(para, first_line, style_key, prefix))
+            if not is_title_candidate(text):
+                continue
+
+            style_key, prefix = classify_numbering(text)
+
+            # 如果纯文本无编号，检查段落是否有 Word 自动编号
+            if style_key is None:
+                num_key = _get_paragraph_numbering(para)
+                if num_key:
+                    style_key = num_key
+                    prefix = f'[{num_key}]'
+
+            candidates.append(TitleCandidate(
+                para, text, style_key, prefix,
+                line_idx=line_idx, run_indices=run_idxs
+            ))
 
     return candidates
 
@@ -475,8 +533,20 @@ def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_in
         pf.first_line_indent = first_line_indent
 
 
-def apply_style(paragraph, level):
-    """对段落应用指定层级的完整格式。"""
+def _apply_run_level(paragraph, level, run_indices):
+    """仅应用 run 级格式（字体、字号、粗体），不修改段落级格式。"""
+    if level not in FONT_NAMES:
+        return
+    font_name = FONT_NAMES[level]
+    font_size = FONT_SIZES[level]
+    bold = FONT_BOLD[level]
+    for idx in run_indices:
+        if idx < len(paragraph.runs):
+            _set_run_font(paragraph.runs[idx], font_name, font_size, bold)
+
+
+def apply_style(paragraph, level, run_indices=None):
+    """对段落（或指定 run）应用指定层级的完整格式。"""
     if level not in FONT_NAMES:
         return
 
@@ -490,8 +560,15 @@ def apply_style(paragraph, level):
     else:
         _set_paragraph_format(paragraph, alignment)
 
-    for run in paragraph.runs:
-        _set_run_font(run, font_name, font_size, bold)
+    if run_indices is not None:
+        # 只格式化指定 run
+        for idx in run_indices:
+            if idx < len(paragraph.runs):
+                _set_run_font(paragraph.runs[idx], font_name, font_size, bold)
+    else:
+        # 格式化所有 run
+        for run in paragraph.runs:
+            _set_run_font(run, font_name, font_size, bold)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -536,9 +613,11 @@ def format_document(doc):
             print(f"    {level_str:4s} {prefix_info:12s} {c.text[:40]}")
 
     # 构建段落→层级查找表
-    para_level = {}
+    # 对于多行段落，存储 {(para._element, line_idx): level}
+    para_level = {}  # (element, line_idx) → level
+    para_lines = {}  # element → [(line_text, run_indices, level_or_None), ...]
     for c in candidates:
-        para_level[c.para._element] = c.level
+        para_level[(c.para._element, c.line_idx)] = c.level
 
     # ── 第三遍：逐段应用格式 ──
     title_applied = False
@@ -551,16 +630,43 @@ def format_document(doc):
         if _is_toc_paragraph(para):
             continue
 
-        # 判断层级
-        if not title_applied and title_para is not None and para._element is title_para._element:
+        # 判断是否有多行标题候选
+        line_groups = _group_runs_by_line(para)
+        has_any_heading = any((para._element, i) in para_level for i in range(len(line_groups)))
+
+        if has_any_heading:
+            # 找到第一个标题行的层级，用于段落级格式
+            first_heading_level = None
+            for i in range(len(line_groups)):
+                lvl = para_level.get((para._element, i))
+                if lvl:
+                    first_heading_level = lvl
+                    break
+
+            # 段落级格式：只用第一个标题行的层级（一次设置，后续不覆盖）
+            if first_heading_level:
+                apply_style(para, first_heading_level, run_indices=[])
+
+            # 逐行应用 run 级格式
+            # 第一个标题行已在 apply_style(ri=[]) 中设置过段落级格式，
+            # 后续行（含标题行和正文行）只改 run 级格式，不覆盖段落级
+            first_heading_applied = False
+            for line_idx, (line_text, run_idxs) in enumerate(line_groups):
+                level = para_level.get((para._element, line_idx))
+                if level:
+                    if not first_heading_applied:
+                        apply_style(para, level, run_indices=run_idxs)
+                        first_heading_applied = True
+                    else:
+                        _apply_run_level(para, level, run_idxs)
+                else:
+                    _apply_run_level(para, 'body', run_idxs)
+        elif not title_applied and title_para is not None and para._element is title_para._element:
             level = 'title'
             title_applied = True
-        elif para._element in para_level:
-            level = para_level[para._element]
+            apply_style(para, level)
         else:
-            level = 'body'
-
-        apply_style(para, level)
+            apply_style(para, 'body')
 
     if not title_applied:
         print("  未找到明确的标题段落。")
