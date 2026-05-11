@@ -482,24 +482,38 @@ def _convert_auto_numbering_to_text(doc):
 
 
 def _remove_all_bold(doc):
-    """预处理：移除全文所有加粗格式。"""
+    """预处理：移除全文所有加粗格式（含 XML 级 w:b / w:bCs）。"""
+    from docx.oxml.ns import qn as _qn
     removed = 0
+
+    def _remove_bold_from_run(run):
+        nonlocal removed
+        rPr = run._element.find(qn('w:rPr'))
+        if rPr is not None:
+            b_elem = rPr.find(qn('w:b'))
+            if b_elem is not None:
+                rPr.remove(b_elem)
+                removed += 1
+            bCs_elem = rPr.find(qn('w:bCs'))
+            if bCs_elem is not None:
+                rPr.remove(bCs_elem)
+                removed += 1
+        # 同时清空 python-docx 属性
+        run.font.bold = False
+
     for para in doc.paragraphs:
         for run in para.runs:
-            if run.font.bold:
-                run.font.bold = False
-                removed += 1
-    # 也处理表格中的文本
+            _remove_bold_from_run(run)
+
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for para in cell.paragraphs:
                     for run in para.runs:
-                        if run.font.bold:
-                            run.font.bold = False
-                            removed += 1
+                        _remove_bold_from_run(run)
+
     if removed > 0:
-        print(f"  已移除 {removed} 处加粗格式。")
+        print(f"  已移除 {removed} 处加粗格式（含 XML 级）。")
 
 
 def _remove_empty_paragraphs(doc):
@@ -557,6 +571,13 @@ def _format_tables(doc):
         table_grid = style
 
     for table in doc.tables:
+        # ── 移除表格自带的 tblBorders（inline 设置会覆盖样式） ──
+        tblPr = table._element.find(qn('w:tblPr'))
+        if tblPr is not None:
+            old_borders = tblPr.find(qn('w:tblBorders'))
+            if old_borders is not None:
+                tblPr.remove(old_borders)
+
         table.style = table_grid
 
         # ── 表头（第一行）灰色背景 ──
@@ -570,7 +591,7 @@ def _format_tables(doc):
                 if old_shd is not None:
                     tcPr.remove(old_shd)
                 shd = OxmlElement('w:shd')
-                shd.set(qn('w:val'), 'clear')
+                shd.set(qn('w:val'), 'solid')
                 shd.set(qn('w:color'), 'auto')
                 shd.set(qn('w:fill'), 'D9D9D9')
                 tcPr.append(shd)
