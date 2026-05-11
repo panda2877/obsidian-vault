@@ -275,6 +275,7 @@ def _get_paragraph_numbering(para):
 
     返回风格标识字符串（如 'auto_3_0' = numId=3, ilvl=0），
     无自动编号时返回 None。
+    numId=0 表示"无编号"，也返回 None。
     """
     pPr = para._element.find(qn('w:pPr'))
     if pPr is None:
@@ -284,10 +285,195 @@ def _get_paragraph_numbering(para):
         return None
 
     numId_el = numPr.find(qn('w:numId'))
+    if numId_el is None:
+        return None
+    num_id = numId_el.get(qn('w:val'))
+    if num_id is None or num_id == '0':
+        return None
+
     ilvl_el = numPr.find(qn('w:ilvl'))
-    num_id = numId_el.get(qn('w:val')) if numId_el is not None else '0'
     ilvl = ilvl_el.get(qn('w:val')) if ilvl_el is not None else '0'
     return f'auto_{num_id}_{ilvl}'
+
+
+# 中文数字映射
+CHINESE_NUMS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
+                '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十']
+
+
+def _num_to_chinese(n):
+    """将整数转换为中文数字（支持 1~99）。"""
+    if 1 <= n <= 20:
+        return CHINESE_NUMS[n]
+    if n < 100:
+        tens = n // 10
+        units = n % 10
+        if units == 0:
+            return CHINESE_NUMS[tens] + '十'
+        return CHINESE_NUMS[tens] + '十' + CHINESE_NUMS[units]
+    return str(n)
+
+
+ROMAN_MAP = [
+    (1000, 'M'), (900, 'CM'), (500, 'D'), (400, 'CD'),
+    (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'),
+    (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I'),
+]
+
+
+def _num_to_roman(n, upper=True):
+    """将整数转换为罗马数字。"""
+    result = ''
+    for val, sym in ROMAN_MAP:
+        while n >= val:
+            result += sym
+            n -= val
+    return result if upper else result.lower()
+
+
+def _format_number(n, fmt):
+    """按格式将整数编号转为字符串。"""
+    if fmt == 'decimal':
+        return str(n)
+    if fmt == 'chineseCounting':
+        return _num_to_chinese(n)
+    if fmt == 'lowerLetter':
+        return chr(ord('a') + n - 1) if 1 <= n <= 26 else str(n)
+    if fmt == 'upperLetter':
+        return chr(ord('A') + n - 1) if 1 <= n <= 26 else str(n)
+    if fmt == 'lowerRoman':
+        return _num_to_roman(n, upper=False)
+    if fmt == 'upperRoman':
+        return _num_to_roman(n, upper=True)
+    if fmt == 'ordinal':
+        suffix = 'th' if 11 <= n % 100 <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+        return str(n) + suffix
+    return str(n)
+
+
+def _convert_auto_numbering_to_text(doc):
+    """
+    预处理：将所有自动编号转为纯文本。
+
+    解析文档的 numbering 定义，遍历所有段落：
+    - 对有 w:numPr 且 numId>0 的段落，计算渲染后的编号前缀
+    - 将编号前缀插入到段落第一个 run 的开头
+    - 移除 w:numPr 元素（去除自动编号依赖）
+    """
+    numbering_part = doc.part.numbering_part
+    if numbering_part is None:
+        return
+
+    num_el = numbering_part._element
+
+    # 解析 abstractNum 定义：abstractNumId → {ilvl: {start, numFmt, lvlText}}
+    abstracts = {}
+    for ab in num_el.findall(qn('w:abstractNum')):
+        aid = ab.get(qn('w:abstractNumId'))
+        levels = {}
+        for lvl in ab.findall(qn('w:lvl')):
+            ilvl = lvl.get(qn('w:ilvl'))
+            start_el = lvl.find(qn('w:start'))
+            fmt_el = lvl.find(qn('w:numFmt'))
+            text_el = lvl.find(qn('w:lvlText'))
+            levels[ilvl] = {
+                'start': int(start_el.get(qn('w:val'))) if start_el is not None else 1,
+                'numFmt': fmt_el.get(qn('w:val')) if fmt_el is not None else 'decimal',
+                'lvlText': text_el.get(qn('w:val')) if text_el is not None else '%1.',
+            }
+        abstracts[aid] = levels
+
+    # 解析 num 定义：numId → abstractNumId
+    num_map = {}
+    for n in num_el.findall(qn('w:num')):
+        nid = n.get(qn('w:numId'))
+        abid_el = n.find(qn('w:abstractNumId'))
+        if abid_el is not None:
+            num_map[nid] = abid_el.get(qn('w:val'))
+
+    # 跟踪每个 numId+ilvl 的当前编号值
+    counters = {}
+
+    for para in doc.paragraphs:
+        pPr = para._element.find(qn('w:pPr'))
+        if pPr is None:
+            continue
+        numPr = pPr.find(qn('w:numPr'))
+        if numPr is None:
+            continue
+
+        numId_el = numPr.find(qn('w:numId'))
+        if numId_el is None:
+            continue
+        num_id = numId_el.get(qn('w:val'))
+        if num_id is None or num_id == '0':
+            continue
+
+        ilvl_el = numPr.find(qn('w:ilvl'))
+        ilvl = ilvl_el.get(qn('w:val')) if ilvl_el is not None else '0'
+
+        # 查 numbering 定义
+        abs_id = num_map.get(num_id)
+        if abs_id is None:
+            continue
+        levels = abstracts.get(abs_id)
+        if levels is None:
+            continue
+        lvl_def = levels.get(ilvl)
+        if lvl_def is None:
+            continue
+
+        # 递增计数器
+        key = (num_id, ilvl)
+        if key not in counters:
+            counters[key] = lvl_def['start']
+        else:
+            counters[key] += 1
+        num_val = counters[key]
+
+        # 格式化编号
+        fmt = lvl_def['numFmt']
+        formatted = _format_number(num_val, fmt)
+
+        # 生成前缀（替换 %1、%2 等占位符）
+        prefix = lvl_def['lvlText']
+        prefix = prefix.replace('%1', formatted)
+        prefix = re.sub(r'%\d+', '', prefix)
+
+        # 插入到段落第一个 run 的开头
+        if para.runs:
+            first_run = para.runs[0]
+            first_run.text = prefix + first_run.text
+        else:
+            # 没有 run 就创建一个
+            from docx.oxml import OxmlElement
+            r_elem = OxmlElement('w:r')
+            t_elem = OxmlElement('w:t')
+            t_elem.text = prefix
+            t_elem.set(qn('xml:space'), 'preserve')
+            r_elem.append(t_elem)
+            # 在 pPr 后面插入
+            after = pPr
+            for child in para._element:
+                if child.tag == qn('w:pPr'):
+                    continue
+                after = child
+                break
+            para._element.insert(list(para._element).index(after), r_elem)
+
+        # 移除自动编号（w:numPr）
+        pPr.remove(numPr)
+
+        # 在段落 element 上存储原始自动编号信息，供后续检测使用
+        para._element.set(qn('w:numId'), num_id)
+
+
+def _get_stored_numbering(para):
+    """读取预处理阶段存储的原始自动编号信息。"""
+    val = para._element.get(qn('w:numId'))
+    if val:
+        return f'auto_{val}_0'
+    return None
 
 
 def _find_image_paragraphs(doc):
@@ -356,7 +542,15 @@ def collect_candidates(doc, title_para):
 
             style_key, prefix = classify_numbering(text)
 
-            # 如果纯文本无编号，检查段落是否有 Word 自动编号
+            # 如果段落原来有自动编号（预处理阶段已转为纯文本），
+            # 使用原始自动编号作为 style_key，区分不同来源的编号
+            # 注意：自动编号作用于整个段落，只影响第一行
+            stored_key = _get_stored_numbering(para) if line_idx == 0 else None
+            if stored_key:
+                style_key = stored_key
+                prefix = f'[{stored_key}]'
+
+            # 如果纯文本无编号，且无原始自动编号，检查是否有 Word 自动编号
             if style_key is None:
                 num_key = _get_paragraph_numbering(para)
                 if num_key:
@@ -583,6 +777,10 @@ def format_document(doc):
     第二遍：收集标题候选，递归分配层级。
     第三遍：逐段应用格式。
     """
+    # ── 第零遍：预处理——自动编号转纯文本 ──
+    _convert_auto_numbering_to_text(doc)
+    print("  自动编号已转为纯文本。")
+
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
     if title_para is not None:
