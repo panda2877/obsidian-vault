@@ -4,6 +4,7 @@
 
 ```
 公文格式规范/
+├── format_word.exe         # 打包好的 exe（无需 Python，拖拽即用）
 ├── format_word.py          # 主脚本（拖拽运行 / 命令行）
 ├── 方正小标宋_GBK.TTF      # 标题字体
 ├── 黑体_GB18030.TTF        # 一级标题字体
@@ -14,7 +15,18 @@
 
 ## 使用方法
 
-### 方式一：直接运行（需安装 Python）
+### 方式一：使用 format_word.exe（推荐，无需 Python）
+
+直接拖拽 .docx 文件到 `format_word.exe` 上，同目录生成 `输入文件_格式化.docx`。
+
+或者命令行运行：
+
+```
+format_word.exe 输入文件.docx
+format_word.exe 输入文件.docx 输出文件.docx
+```
+
+### 方式二：Python 脚本运行
 
 1. 安装 Python 3.8+
 2. 安装依赖：`pip install python-docx`
@@ -24,7 +36,7 @@
    ```
    同目录生成 `输入文件_格式化.docx`
 
-### 方式二：打包为 exe（无需 Python）
+### 方式三：自行打包 exe
 
 在 Windows 上操作：
 
