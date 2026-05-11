@@ -19,6 +19,7 @@ v4 改进：
   - 自动编号 → 纯文本（兼容 Word 自动编号列表）
   - 按规范重写编号：一、→（一）→ 1. →（1）
   - 移除正文空行
+  - 表格统一样式：单实线边框，表头灰色
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -500,6 +501,54 @@ def _remove_empty_paragraphs(doc):
         print(f"  已移除 {removed} 个空行。")
 
 
+def _format_tables(doc):
+    """统一表格样式：单实线边框，表头灰色背景。"""
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn, nsdecls
+    from lxml import etree
+
+    for table in doc.tables:
+        # ── 设置表格边框：单实线 ──
+        tblPr = table._tbl.find(qn('w:tblPr'))
+        if tblPr is None:
+            tblPr = OxmlElement('w:tblPr')
+            table._tbl.insert(0, tblPr)
+
+        # 移除旧边框定义
+        old_borders = tblPr.find(qn('w:tblBorders'))
+        if old_borders is not None:
+            tblPr.remove(old_borders)
+
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            edge_el = OxmlElement(f'w:{edge}')
+            edge_el.set(qn('w:val'), 'single')
+            edge_el.set(qn('w:sz'), '4')       # 0.5pt
+            edge_el.set(qn('w:space'), '0')
+            edge_el.set(qn('w:color'), '000000')
+            borders.append(edge_el)
+        tblPr.append(borders)
+
+        # ── 表头（第一行）灰色背景 ──
+        if table.rows:
+            for cell in table.rows[0].cells:
+                tcPr = cell._tc.find(qn('w:tcPr'))
+                if tcPr is None:
+                    tcPr = OxmlElement('w:tcPr')
+                    cell._tc.insert(0, tcPr)
+                # 移除旧 shading
+                old_shd = tcPr.find(qn('w:shd'))
+                if old_shd is not None:
+                    tcPr.remove(old_shd)
+                shd = OxmlElement('w:shd')
+                shd.set(qn('w:val'), 'clear')
+                shd.set(qn('w:color'), 'auto')
+                shd.set(qn('w:fill'), 'D9D9D9')  # 浅灰
+                tcPr.append(shd)
+
+    print(f"  已格式化 {len(doc.tables)} 个表格。")
+
+
 def _find_image_paragraphs(doc):
     """找出所有包含图片的段落，返回这些段落 element 的集合。"""
     image_paras = set()
@@ -865,10 +914,9 @@ def format_document(doc):
     第二遍：收集标题候选，递归分配层级。
     第三遍：逐段应用格式。
     """
-    # ── 第零遍：预处理——自动编号转纯文本 + 移除空行 ──
+    # ── 第零遍：预处理——自动编号转纯文本 ──
     _convert_auto_numbering_to_text(doc)
     print("  自动编号已转为纯文本。")
-    _remove_empty_paragraphs(doc)
 
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
@@ -960,6 +1008,10 @@ def format_document(doc):
         print("  未找到明确的标题段落。")
     else:
         print("  标题格式已应用。")
+
+    # ── 第四遍：收尾——移除空行 + 表格统一样式 ──
+    _remove_empty_paragraphs(doc)
+    _format_tables(doc)
 
 
 def main():
