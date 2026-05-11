@@ -6,7 +6,7 @@ Word 文档格式化工具 — 公文格式规范版（v4 递归区间层级识�
 
 格式规范：
   • 标题：     方正小标宋_GBK 二号（22pt），居中
-  • 一级标题： 黑体 三号（16pt），加粗
+  • 一级标题： 黑体 三号（16pt）
   • 二级标题： 楷体_GB2312 三号（16pt）
   • 三级标题： 仿宋_GB2312 三号（16pt）
   • 四级标题： 仿宋_GB2312 三号（16pt）
@@ -70,7 +70,7 @@ FONT_SIZES = {
 
 FONT_BOLD = {
     'title': False,
-    'h1':    True,
+    'h1':    False,
     'h2':    False,
     'h3':    False,
     'h4':    False,
@@ -131,8 +131,8 @@ def classify_numbering(text):
     if m:
         return ('chapter', m.group(1))
 
-    # 阿拉伯数字 + ．.、)
-    m = re.match(r'^(\d+[．.、)])', text)
+    # 阿拉伯数字 + ．.、)）
+    m = re.match(r'^(\d+[．.、)）])', text)
     if m:
         return ('arabic_dot', m.group(1))
 
@@ -162,6 +162,7 @@ def is_title_candidate(text):
     2. 不含 。！？
     3. 长度 ≤ MAX_TITLE_LENGTH
     4. 不以 ：结尾
+    5. 不以 图/表/Fig/Table 开头（图片/表格标题）
     """
     text = text.strip()
     if not text:
@@ -171,6 +172,9 @@ def is_title_candidate(text):
     if len(text) > MAX_TITLE_LENGTH:
         return False
     if text.endswith('：'):
+        return False
+    # 排除图片/表格标题（图1、表1、Fig 1、Table 1 等）
+    if re.match(r'^(图|表|Fig|Table)\s*\d', text):
         return False
     return True
 
@@ -225,6 +229,24 @@ class TitleCandidate:
         self.level = None  # 由递归算法分配
 
 
+def _get_paragraph_numbering(para):
+    """
+    检测段落是否有 Word 自动编号，返回编号文本（如 "一、" "1." "（1）"）。
+
+    Word 的自动编号存储在 w:pPr/w:numPr 中，编号文本由编号定义决定。
+    这里通过检查 numPr 元素来判断是否有自动编号。
+    """
+    pPr = para._element.find(qn('w:pPr'))
+    if pPr is None:
+        return None
+    numPr = pPr.find(qn('w:numPr'))
+    if numPr is None:
+        return None
+    # 有自动编号，但无法直接获取编号文本（需要解析 numbering.xml）
+    # 返回标记让调用方知道这是有编号的段落
+    return '<auto_numbering>'
+
+
 def collect_candidates(doc, title_para):
     """
     收集文档中所有标题候选（排除文档标题和 TOC）。
@@ -242,6 +264,15 @@ def collect_candidates(doc, title_para):
             continue
 
         style_key, prefix = classify_numbering(text)
+
+        # 如果纯文本无编号，检查是否有 Word 自动编号
+        if style_key is None:
+            num_text = _get_paragraph_numbering(para)
+            if num_text:
+                # 用自动编号标记，但无法精确分类 → 用通用编号风格
+                style_key = 'auto_num'
+                prefix = num_text
+
         candidates.append(TitleCandidate(para, text, style_key, prefix))
 
     return candidates
@@ -380,6 +411,20 @@ def _set_run_font(run, font_name, font_size, bold=False):
     rFonts.set(qn('w:eastAsia'), font_name)
     rFonts.set(qn('w:ascii'), font_name)
     rFonts.set(qn('w:hAnsi'), font_name)
+
+    # 显式移除加粗（确保覆盖原文样式）
+    b_elem = rPr.find(qn('w:b'))
+    if not bold:
+        if b_elem is not None:
+            rPr.remove(b_elem)
+        # 同时移除 w:bCs（复杂脚本加粗）
+        bCs = rPr.find(qn('w:bCs'))
+        if bCs is not None:
+            rPr.remove(bCs)
+    else:
+        if b_elem is None:
+            b_elem = OxmlElement('w:b')
+            rPr.append(b_elem)
 
 
 def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_indent=None):
