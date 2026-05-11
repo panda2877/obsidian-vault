@@ -1,0 +1,12 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+
+# 临时文件
+*.tmp
