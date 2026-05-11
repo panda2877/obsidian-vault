@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Word 文档格式化工具
-====================
-根据指定格式规范，自动格式化 Word 文档的标题、层级标题和正文。
+Word 文档格式化工具 — 公文格式规范版
+========================================
+根据党政机关公文格式规范，自动格式化 Word 文档。
 
 格式规范：
-  • 标题：     宋体 二号（22pt），居中
+  • 标题：     方正小标宋_GBK 二号（22pt），居中
   • 一级标题： 黑体 三号（16pt），中文数字+"、"
-  • 二级标题： 仿宋_GB2312 三号（16pt），"(中文数字）"
+  • 二级标题： 楷体_GB2312 三号（16pt），"(中文数字）"
   • 三级标题： 仿宋_GB2312 三号（16pt），阿拉伯数字+"."
   • 四级标题： 仿宋_GB2312 三号（16pt），"(阿拉伯数字）"
   • 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
@@ -15,11 +15,9 @@ Word 文档格式化工具
 层次规则：按顺序使用，可跳跃不可逆序。
 
 使用方法：
-    python3 format_word.py <输入文件.docx> [输出文件.docx]
+    format_word.exe <输入文件.docx> [输出文件.docx]
 
     若不指定输出文件，默认在输入文件同目录生成 "格式化_<原文件名>.docx"。
-
-依赖：python-docx（apt install python3-docx 或 pip install python-docx）
 """
 
 import re
@@ -36,30 +34,31 @@ from docx.oxml import OxmlElement
 # ═══════════════════════════════════════════════════════════════════
 # 配置区 — 字体文件
 # ═══════════════════════════════════════════════════════════════════
-# 说明：字体文件优先使用脚本同文件夹下的文件。
-# 请将以下字体文件下载到本脚本所在目录，并填写文件名：
+# 字体文件优先使用本脚本所在目录下的文件。
+# 请将以下字体文件放到本脚本同目录下：
 #
-#   FONT_FILES = {
-#       '宋体': 'simsun.ttf',              # ← 请补全文件名
-#       '黑体': 'simhei.ttf',              # ← 请补全文件名
-#       '仿宋_GB2312': 'fangsong.ttf',     # ← 请补全文件名
-#   }
+#   方正小标宋_GBK → 方正小标宋_GBK.TTF
+#   仿宋_GB2312    → 仿宋_GB2312.TTF
+#   黑体           → 黑体_GB18030.TTF
+#   楷体_GB2312    → 楷体_GB2312.TTF
 #
-# 留空 = 使用系统字体名称（Word 打开时自动匹配系统已安装字体）。
+# 若同目录下未找到对应字体文件，脚本将使用系统字体名称
+# （Word 打开文档时自动匹配系统已安装字体）。
 
 FONT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 FONT_FILES = {
-    '宋体': None,          # TODO: 填写字体文件名
-    '黑体': None,          # TODO: 填写字体文件名
-    '仿宋_GB2312': None,  # TODO: 填写字体文件名
+    '方正小标宋_GBK': '方正小标宋_GBK.TTF',
+    '仿宋_GB2312':    '仿宋_GB2312.TTF',
+    '黑体':           '黑体_GB18030.TTF',
+    '楷体_GB2312':    '楷体_GB2312.TTF',
 }
 
 # 字体名称（写入 docx XML，Word 根据此名称渲染）
 FONT_NAMES = {
-    'title': '宋体',
+    'title': '方正小标宋_GBK',
     'h1':    '黑体',
-    'h2':    '仿宋_GB2312',
+    'h2':    '楷体_GB2312',
     'h3':    '仿宋_GB2312',
     'h4':    '仿宋_GB2312',
     'body':  '仿宋_GB2312',
@@ -82,7 +81,7 @@ FONT_SIZES = {
 # 粗体
 FONT_BOLD = {
     'title': False,
-    'h1':    True,     # 一级标题黑体加粗
+    'h1':    True,
     'h2':    False,
     'h3':    False,
     'h4':    False,
@@ -135,7 +134,7 @@ def detect_level(text):
     if re.match(r'^（[一二三四五六七八九十百千]+）', text):
         return 'h2'
 
-    # 三级标题：阿拉伯数字 + "."（后面有空格或紧跟文字）
+    # 三级标题：阿拉伯数字 + "."（后面有空格）
     if re.match(r'^\d+\.\s', text):
         return 'h3'
 
@@ -167,16 +166,16 @@ def _set_run_font(run, font_name, font_size, bold=False):
 
 
 def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_indent=None):
-        """设置段落格式（对齐、行距、缩进）。"""
-        paragraph.alignment = alignment
-        pf = paragraph.paragraph_format
+    """设置段落格式（对齐、行距、缩进）。"""
+    paragraph.alignment = alignment
+    pf = paragraph.paragraph_format
 
-        if line_spacing is not None:
-            pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
-            pf.line_spacing = line_spacing
+    if line_spacing is not None:
+        pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+        pf.line_spacing = line_spacing
 
-        if first_line_indent is not None:
-            pf.first_line_indent = first_line_indent
+    if first_line_indent is not None:
+        pf.first_line_indent = first_line_indent
 
 
 def apply_style(paragraph, level):
@@ -223,11 +222,9 @@ def format_document(doc):
     for para in doc.paragraphs:
         text = para.text.strip()
 
-        # 空段落跳过
         if not text:
             continue
 
-        # 检测层级
         level = detect_level(text)
 
         # 第一个非空段落且未匹配标题模式 → 视为文档标题
@@ -244,17 +241,22 @@ def format_document(doc):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法：python3 format_word.py <输入文件.docx> [输出文件.docx]")
+        print("用法：format_word.exe <输入文件.docx> [输出文件.docx]")
+        print("示例：format_word.exe 报告.docx")
+        print("       format_word.exe 报告.docx 已格式化_报告.docx")
+        input("\n按 Enter 键退出……")
         sys.exit(1)
 
     input_path = sys.argv[1]
 
     if not os.path.isfile(input_path):
         print(f"错误：文件不存在 — {input_path}")
+        input("\n按 Enter 键退出……")
         sys.exit(1)
 
     if not input_path.lower().endswith('.docx'):
         print(f"错误：仅支持 .docx 格式 — {input_path}")
+        input("\n按 Enter 键退出……")
         sys.exit(1)
 
     # 输出路径
@@ -274,6 +276,7 @@ def main():
     doc.save(output_path)
 
     print("✅ 完成！")
+    input("\n按 Enter 键退出……")
 
 
 if __name__ == '__main__':
