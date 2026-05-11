@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Word 文档格式化工具 — 公文格式规范版
-========================================
+Word 文档格式化工具 — 公文格式规范版（v2 智能标题识别）
+========================================================
 根据党政机关公文格式规范，自动格式化 Word 文档。
 
 格式规范：
@@ -13,6 +13,11 @@ Word 文档格式化工具 — 公文格式规范版
   • 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
 
 层次规则：按顺序使用，可跳跃不可逆序。
+
+v2 改进：
+  - 全文预扫描识别标题（不再简单取"第一个非序号段落"）
+  - 跳过 Word 自动目录
+  - 层级状态机跟踪上下文
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -104,6 +109,14 @@ LINE_SPACING_FIXED = Pt(28)
 # 首行缩进 2 字符（三号字 16pt，2 字符 ≈ 32pt）
 FIRST_LINE_INDENT = Pt(32)
 
+# 公文标题常见关键词（用于标题评分）
+TITLE_KEYWORDS = [
+    '关于', '报告', '通知', '方案', '印发', '转发', '批复',
+    '意见', '办法', '规定', '决定', '通报', '公告', '通告',
+    '请示', '函', '纪要', '总结', '计划', '规划', '安排',
+    '实施', '细则', '条例', '指示', '命令', '决议',
+]
+
 
 # ═══════════════════════════════════════════════════════════════════
 # 层级标题检测
@@ -114,7 +127,6 @@ def detect_level(text):
     根据段落文本检测标题层级。
 
     返回：
-        'title'  — 文档标题（无序号的首段）
         'h1'     — 一级标题：一、 二、 三、 ……
         'h2'     — 二级标题：（一）（二）（三）……
         'h3'     — 三级标题：1. 2. 3. ……
@@ -143,6 +155,120 @@ def detect_level(text):
         return 'h4'
 
     return 'body'
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 标题预扫描（v2 新增）
+# ═══════════════════════════════════════════════════════════════════
+
+def _is_toc_paragraph(para):
+    """判断是否为 Word 自动生成的目录段落。"""
+    style = para.style
+    if style and style.name and style.name.startswith('TOC'):
+        return True
+    # 也检查 XML 中的样式 ID
+    pPr = para._element.find(qn('w:pPr'))
+    if pPr is not None:
+        pStyle = pPr.find(qn('w:pStyle'))
+        if pStyle is not None:
+            val = pStyle.get(qn('w:val'))
+            if val and val.startswith('TOC'):
+                return True
+    return False
+
+
+def _title_score(text, total_paras, para_index):
+    """
+    给一个段落文本打"标题分"，分数越高越像文档标题。
+
+    评分因子：
+      +5  包含公文关键词（关于、报告、通知……）
+      +3  长度在 10~60 字之间
+      +2  不以 。！？，、；结尾
+      +1  在文档前 30% 的位置
+      -5  少于 8 个字
+      -3  以 。！？结尾
+      -2  以"的"结尾（"的"结尾通常是描述性文字）
+    """
+    score = 0
+    text = text.strip()
+
+    # 长度
+    length = len(text)
+    if 10 <= length <= 60:
+        score += 3
+    elif length < 8:
+        score -= 5
+    elif length > 100:
+        score -= 1  # 太长的也不太像标题
+
+    # 公文关键词
+    for kw in TITLE_KEYWORDS:
+        if kw in text:
+            score += 5
+            break
+
+    # 结尾标点
+    if text.endswith(('。', '！', '？')):
+        score -= 3
+    elif text.endswith(('，', '、', '；')):
+        score -= 2
+    else:
+        score += 2
+
+    # 以"的"结尾 → 通常是描述性文字
+    if text.endswith('的'):
+        score -= 2
+
+    # 位置靠前加分
+    if total_paras > 0 and para_index / total_paras < 0.3:
+        score += 1
+
+    return score
+
+
+def find_title_paragraph(doc):
+    """
+    第一遍扫描：遍历全文，找出最像文档标题的段落。
+
+    返回：
+        (paragraph, text) — 标题段落对象和文本
+        如果找不到合适的，返回 (None, None)
+    """
+    candidates = []
+    all_paras = list(doc.paragraphs)
+    total = len(all_paras)
+
+    for i, para in enumerate(all_paras):
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # 跳过目录段落
+        if _is_toc_paragraph(para):
+            continue
+
+        # 跳过匹配标题模式的段落（序号段落不会是文档标题）
+        if detect_level(text) != 'body':
+            continue
+
+        score = _title_score(text, total, i)
+        candidates.append((score, i, para, text))
+
+    if not candidates:
+        return None, None
+
+    # 按分数降序排列
+    candidates.sort(key=lambda x: x[0], reverse=True)
+
+    # 取最高分
+    best_score, best_idx, best_para, best_text = candidates[0]
+
+    # 分数 <= 0 说明没有段落像标题，返回 None
+    if best_score <= 0:
+        return None, None
+
+    return best_para, best_text
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -206,35 +332,75 @@ def apply_style(paragraph, level):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 主流程
+# 主流程（v2 重写）
 # ═══════════════════════════════════════════════════════════════════
+
+# 层级数值映射（用于状态机比较）
+LEVEL_NUM = {
+    'title': 0,
+    'h1':    1,
+    'h2':    2,
+    'h3':    3,
+    'h4':    4,
+    'body':  5,
+}
+
 
 def format_document(doc):
     """
-    遍历文档所有段落，检测层级并应用格式。
+    两遍扫描格式化文档。
 
-    特殊规则：
-    - 第一个非空段落若未匹配任何标题模式，视为文档标题（title）
-    - 空段落跳过
+    第一遍：全文预扫描，智能识别标题。
+    第二遍：逐段格式化，带层级状态机跟踪上下文。
     """
-    first_para = True
+    # ── 第一遍：找标题 ──
+    title_para, title_text = find_title_paragraph(doc)
+    if title_para is not None:
+        print(f"  识别标题：「{title_text[:40]}{'…' if len(title_text) > 40 else ''}」")
+
+    # ── 第二遍：逐段格式化 ──
+    current_level = 'body'  # 当前所处的层级上下文
+    title_applied = False   # 标题是否已应用
 
     for para in doc.paragraphs:
         text = para.text.strip()
-
         if not text:
             continue
 
-        level = detect_level(text)
+        # 跳过 Word 自动目录
+        if _is_toc_paragraph(para):
+            continue
 
-        # 第一个非空段落且未匹配标题模式 → 视为文档标题
-        if first_para and level == 'body':
+        # ── 判断层级 ──
+        # 如果这个段落是识别出的标题（通过底层 XML 元素匹配）
+        if not title_applied and title_para is not None and para._element is title_para._element:
             level = 'title'
-            first_para = False
-        elif level != 'body':
-            first_para = False
+            title_applied = True
+        else:
+            level = detect_level(text)
+
+        # ── 层级状态机 ──
+        if level != 'body':
+            # 这是一个标题段落
+            level_num = LEVEL_NUM[level]
+            current_num = LEVEL_NUM[current_level]
+
+            if level_num < current_num:
+                # 回到更高级别（如 h3 → h1），新章节开始，允许
+                pass
+            # 同级或更深，都允许
+
+            current_level = level
+        else:
+            # 正文段落
+            level = 'body'
 
         apply_style(para, level)
+
+    if not title_applied:
+        print("  未找到明确的标题段落，使用默认正文格式。")
+    else:
+        print("  标题格式已应用。")
 
     return doc
 
