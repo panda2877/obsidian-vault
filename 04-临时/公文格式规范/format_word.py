@@ -10,12 +10,15 @@ Word 文档格式化工具 — 公文格式规范版（v4 递归区间层级识�
   • 二级标题： 楷体_GB2312 三号（16pt）
   • 三级标题： 仿宋_GB2312 三号（16pt）
   • 四级标题： 仿宋_GB2312 三号（16pt）
-  • 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
+• 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
 
 v4 改进：
   - 递归区间划分：先全局找 h1，再在每个 h1 之间独立找 h2，递归类推
   - 无编号标题 = 当前递归层的格式
   - 每个同级标题之间的区间独立遍历
+  - 自动编号 → 纯文本（兼容 Word 自动编号列表）
+  - 按规范重写编号：一、→（一）→ 1. →（1）
+  - 移除正文空行
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -365,21 +368,28 @@ def _convert_auto_numbering_to_text(doc):
         return
 
     num_el = numbering_part._element
+    if num_el is None:
+        return
 
     # 解析 abstractNum 定义：abstractNumId → {ilvl: {start, numFmt, lvlText}}
     abstracts = {}
     for ab in num_el.findall(qn('w:abstractNum')):
         aid = ab.get(qn('w:abstractNumId'))
+        if aid is None:
+            continue
         levels = {}
         for lvl in ab.findall(qn('w:lvl')):
             ilvl = lvl.get(qn('w:ilvl'))
             start_el = lvl.find(qn('w:start'))
             fmt_el = lvl.find(qn('w:numFmt'))
             text_el = lvl.find(qn('w:lvlText'))
+            start_val = int(start_el.get(qn('w:val'))) if start_el is not None and start_el.get(qn('w:val')) is not None else 1
+            fmt_val = fmt_el.get(qn('w:val')) if fmt_el is not None else 'decimal'
+            text_val = text_el.get(qn('w:val')) if text_el is not None else '%1.'
             levels[ilvl] = {
-                'start': int(start_el.get(qn('w:val'))) if start_el is not None else 1,
-                'numFmt': fmt_el.get(qn('w:val')) if fmt_el is not None else 'decimal',
-                'lvlText': text_el.get(qn('w:val')) if text_el is not None else '%1.',
+                'start': start_val,
+                'numFmt': fmt_val,
+                'lvlText': text_val,
             }
         abstracts[aid] = levels
 
@@ -387,9 +397,13 @@ def _convert_auto_numbering_to_text(doc):
     num_map = {}
     for n in num_el.findall(qn('w:num')):
         nid = n.get(qn('w:numId'))
+        if nid is None or nid == '0':
+            continue
         abid_el = n.find(qn('w:abstractNumId'))
         if abid_el is not None:
-            num_map[nid] = abid_el.get(qn('w:val'))
+            abid_val = abid_el.get(qn('w:val'))
+            if abid_val is not None:
+                num_map[nid] = abid_val
 
     # 跟踪每个 numId+ilvl 的当前编号值
     counters = {}
@@ -463,6 +477,27 @@ def _convert_auto_numbering_to_text(doc):
 
         # 移除自动编号（w:numPr）
         pPr.remove(numPr)
+
+
+def _remove_empty_paragraphs(doc):
+    """移除所有空段落（正文中的空行），保留含图片的段落。"""
+    image_paras = _find_image_paragraphs(doc)
+    removed = 0
+
+    for para in list(doc.paragraphs):
+        if para._element in image_paras:
+            continue
+        if not para.text.strip():
+            pPr = para._element.find(qn('w:pPr'))
+            if pPr is not None:
+                # 跳过包含分节符的段落（文档结构边界）
+                if para._element.find(qn('w:sectPr')) is not None:
+                    continue
+            para._element.getparent().remove(para._element)
+            removed += 1
+
+    if removed > 0:
+        print(f"  已移除 {removed} 个空行。")
 
 
 def _find_image_paragraphs(doc):
@@ -662,6 +697,78 @@ def assign_all_levels(candidates):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# 编号重写（按规范优化标题编号）
+# ═══════════════════════════════════════════════════════════════════
+
+def _replace_prefix_in_para(candidate, new_prefix):
+    """替换段落中的编号前缀为新格式。"""
+    para = candidate.para
+    old_prefix = candidate.prefix
+    run_indices = candidate.run_indices
+
+    if not run_indices:
+        return
+
+    first_run_idx = run_indices[0]
+    if first_run_idx >= len(para.runs):
+        return
+
+    run = para.runs[first_run_idx]
+
+    if old_prefix:
+        # 替换旧前缀
+        if run.text.startswith(old_prefix):
+            run.text = new_prefix + run.text[len(old_prefix):]
+        elif old_prefix in run.text:
+            run.text = run.text.replace(old_prefix, new_prefix, 1)
+    else:
+        # 无旧前缀，直接插入
+        run.text = new_prefix + run.text
+
+
+def rewrite_numbering(candidates):
+    """
+    按照规范重新编写标题编号（h1~h4）：
+
+    h1 → 一、二、三、……（中文数字 + 顿号）
+    h2 → （一）（二）（三）……（括号中文数字）
+    h3 → 1. 2. 3. ……（阿拉伯数字 + 点）
+    h4 → （1）（2）（3）……（括号阿拉伯数字）
+
+    计数器按层级重置：h2 在每个 h1 区间内重新计数，
+    h3 在每个 h2 内，h4 在每个 h3 内。
+    """
+    h1_counter = 0
+    h2_counter = 0
+    h3_counter = 0
+    h4_counter = 0
+
+    for c in candidates:
+        if c.level == 'h1':
+            h1_counter += 1
+            h2_counter = 0
+            h3_counter = 0
+            h4_counter = 0
+            new_prefix = _num_to_chinese(h1_counter) + '、'
+        elif c.level == 'h2':
+            h2_counter += 1
+            h3_counter = 0
+            h4_counter = 0
+            new_prefix = '（' + _num_to_chinese(h2_counter) + '）'
+        elif c.level == 'h3':
+            h3_counter += 1
+            h4_counter = 0
+            new_prefix = str(h3_counter) + '.'
+        elif c.level == 'h4':
+            h4_counter += 1
+            new_prefix = '（' + str(h4_counter) + '）'
+        else:
+            continue
+
+        _replace_prefix_in_para(c, new_prefix)
+
+
+# ═══════════════════════════════════════════════════════════════════
 # 字体设置
 # ═══════════════════════════════════════════════════════════════════
 
@@ -758,18 +865,20 @@ def format_document(doc):
     第二遍：收集标题候选，递归分配层级。
     第三遍：逐段应用格式。
     """
-    # ── 第零遍：预处理——自动编号转纯文本 ──
+    # ── 第零遍：预处理——自动编号转纯文本 + 移除空行 ──
     _convert_auto_numbering_to_text(doc)
     print("  自动编号已转为纯文本。")
+    _remove_empty_paragraphs(doc)
 
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
     if title_para is not None:
         print(f"  识别标题：「{title_text[:40]}{'…' if len(title_text) > 40 else ''}」")
 
-    # ── 第二遍：收集标题候选 + 递归分配层级 ──
+    # ── 第二遍：收集标题候选 + 递归分配层级 + 编号重写 ──
     candidates = collect_candidates(doc, title_para)
     assign_all_levels(candidates)
+    rewrite_numbering(candidates)
 
     # 打印分配结果
     if candidates:
