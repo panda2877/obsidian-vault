@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Word 文档格式化工具 — 公文格式规范版（v3 动态层级识别）
+Word 文档格式化工具 — 公文格式规范版（v4 递归区间层级识别）
 ========================================================
 根据党政机关公文格式规范，自动格式化 Word 文档。
 
@@ -12,11 +12,10 @@ Word 文档格式化工具 — 公文格式规范版（v3 动态层级识别）
   • 四级标题： 仿宋_GB2312 三号（16pt）
   • 正文：     仿宋_GB2312 三号（16pt），首行缩进2字符，行距固定28磅
 
-v3 改进：
-  - 不再硬编码编号格式，而是动态分析文档中的编号风格
-  - 同风格编号 = 同层级，不同风格 = 不同层级
-  - 无编号标题 = 最深编号层级 + 1
-  - 标题候选条件：不含 。！？、长度 ≤ 60、不以 ：结尾
+v4 改进：
+  - 递归区间划分：先全局找 h1，再在每个 h1 之间独立找 h2，递归类推
+  - 无编号标题 = 当前递归层的格式
+  - 每个同级标题之间的区间独立遍历
 
 使用方法：
     format_word.exe <输入文件.docx> [输出文件.docx]
@@ -38,17 +37,6 @@ from docx.oxml import OxmlElement
 # ═══════════════════════════════════════════════════════════════════
 # 配置区 — 字体文件
 # ═══════════════════════════════════════════════════════════════════
-# 字体文件优先使用本脚本所在目录下的文件。
-# 请将以下字体文件放到本脚本同目录下：
-#
-#   方正小标宋_GBK → 方正小标宋_GBK.TTF
-#   仿宋_GB2312    → 仿宋_GB2312.TTF
-#   黑体           → 黑体_GB18030.TTF
-#   楷体_GB2312    → 楷体_GB2312.TTF
-#
-# 若同目录下未找到对应字体文件，脚本将使用系统字体名称
-# （Word 打开文档时自动匹配系统已安装字体）。
-
 FONT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 FONT_FILES = {
@@ -58,7 +46,6 @@ FONT_FILES = {
     '楷体_GB2312':    '楷体_GB2312.TTF',
 }
 
-# 字体名称（写入 docx XML，Word 根据此名称渲染）
 FONT_NAMES = {
     'title': '方正小标宋_GBK',
     'h1':    '黑体',
@@ -72,7 +59,6 @@ FONT_NAMES = {
 # 配置区 — 字号与格式参数
 # ═══════════════════════════════════════════════════════════════════
 
-# 字号（中文字号 → 磅值：二号=22pt, 三号=16pt）
 FONT_SIZES = {
     'title': Pt(22),
     'h1':    Pt(16),
@@ -82,7 +68,6 @@ FONT_SIZES = {
     'body':  Pt(16),
 }
 
-# 粗体
 FONT_BOLD = {
     'title': False,
     'h1':    True,
@@ -92,7 +77,6 @@ FONT_BOLD = {
     'body':  False,
 }
 
-# 对齐方式
 ALIGNMENT = {
     'title': WD_ALIGN_PARAGRAPH.CENTER,
     'h1':    WD_ALIGN_PARAGRAPH.LEFT,
@@ -102,14 +86,11 @@ ALIGNMENT = {
     'body':  WD_ALIGN_PARAGRAPH.JUSTIFY,
 }
 
-# 行距固定值 28 磅
 LINE_SPACING_FIXED = Pt(28)
-
-# 首行缩进 2 字符（三号字 16pt，2 字符 ≈ 32pt）
 FIRST_LINE_INDENT = Pt(32)
-
-# 标题候选最大长度
 MAX_TITLE_LENGTH = 60
+
+LEVEL_NAMES = ['h1', 'h2', 'h3', 'h4']
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -122,9 +103,14 @@ def classify_numbering(text):
 
     返回 (style_key, prefix_text)：
       style_key  — 用于聚类同层标题的标识
-      prefix_text — 编号前缀原文（如 "一、" "（一）" "1."）
+      prefix_text — 编号前缀原文
     无编号时返回 (None, None)。
     """
+    # 多级编号 1.1, 2.3.1（需在 arabic_dot 之前检查）
+    m = re.match(r'^(\d+\.\d+)', text)
+    if m:
+        return ('arabic_multi', m.group(1))
+
     # 中文数字 + 、．.
     m = re.match(r'^([一二三四五六七八九十百千]+[、．.])', text)
     if m:
@@ -144,11 +130,6 @@ def classify_numbering(text):
     m = re.match(r'^(第[一二三四五六七八九十百千\d]+[章条节项款])', text)
     if m:
         return ('chapter', m.group(1))
-
-    # 多级编号 1.1, 2.3.1（需在 arabic_dot 之前检查）
-    m = re.match(r'^(\d+\.\d+)', text)
-    if m:
-        return ('arabic_multi', m.group(1))
 
     # 阿拉伯数字 + ．.、)
     m = re.match(r'^(\d+[．.、)])', text)
@@ -178,9 +159,9 @@ def is_title_candidate(text):
 
     条件：
     1. 非空
-    2. 不含句号、感叹号、问号（。！？）
+    2. 不含 。！？
     3. 长度 ≤ MAX_TITLE_LENGTH
-    4. 不以冒号结尾（"通知如下："这类过渡句排除）
+    4. 不以 ：结尾
     """
     text = text.strip()
     if not text:
@@ -214,12 +195,7 @@ def _is_toc_paragraph(para):
 
 
 def find_title_paragraph(doc):
-    """
-    找文档标题。
-
-    规则：第一段不含句号感叹号问号的非空文本段落即为标题。
-    （跳过 Word 自动目录段落）
-    """
+    """找文档标题：第一段不含 。！？ 的文本段落。"""
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
@@ -234,59 +210,148 @@ def find_title_paragraph(doc):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 层级映射构建（v3 核心）
+# 标题候选收集
 # ═══════════════════════════════════════════════════════════════════
 
-def build_level_map(doc, title_para):
+class TitleCandidate:
+    """标题候选，存储段落信息和分配结果。"""
+    __slots__ = ('para', 'text', 'style_key', 'prefix', 'level')
+
+    def __init__(self, para, text, style_key, prefix):
+        self.para = para
+        self.text = text
+        self.style_key = style_key
+        self.prefix = prefix
+        self.level = None  # 由递归算法分配
+
+
+def collect_candidates(doc, title_para):
     """
-    扫描全文，构建编号风格 → 层级映射。
-
-    规则：
-    - 按首次出现顺序分配 h1/h2/h3/h4
-    - 同风格编号 = 同层级
-    - 不同风格 = 不同层级
-
-    返回：
-        level_map: {style_key: level_name}
-        unnumbered_level: 无编号标题的默认层级
+    收集文档中所有标题候选（排除文档标题和 TOC）。
     """
-    style_order = []
-    seen_styles = set()
-
+    candidates = []
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
             continue
         if _is_toc_paragraph(para):
             continue
-        # 跳过文档标题段落
         if title_para is not None and para._element is title_para._element:
             continue
         if not is_title_candidate(text):
             continue
 
-        style_key, _ = classify_numbering(text)
-        if style_key and style_key not in seen_styles:
-            seen_styles.add(style_key)
-            style_order.append(style_key)
+        style_key, prefix = classify_numbering(text)
+        candidates.append(TitleCandidate(para, text, style_key, prefix))
 
-    # 分配层级
-    level_names = ['h1', 'h2', 'h3', 'h4']
-    level_map = {}
-    for i, style_key in enumerate(style_order):
-        if i < 4:
-            level_map[style_key] = level_names[i]
+    return candidates
 
-    # 无编号标题的默认层级 = 最深编号层级 + 1
-    num_levels = len(style_order)
-    if num_levels == 0:
-        unnumbered_level = 'h1'
-    elif num_levels >= 4:
-        unnumbered_level = 'h4'
-    else:
-        unnumbered_level = level_names[num_levels]
 
-    return level_map, unnumbered_level
+# ═══════════════════════════════════════════════════════════════════
+# 递归区间层级分配（v4 核心）
+# ═══════════════════════════════════════════════════════════════════
+
+def _assign_level(candidates, start, end, parent_style, level_idx):
+    """
+    在 [start, end) 区间内递归分配层级。
+
+    参数：
+        candidates   — 标题候选列表
+        start, end   — 当前区间范围
+        parent_style — 父层级的编号风格（用于排除）
+        level_idx    — 当前要分配的层级索引（0=h1, 1=h2, 2=h3, 3=h4）
+
+    逻辑：
+        1. 无编号标题 → 当前层级
+        2. 第一个有编号的标题 → 当前层级的风格
+        3. 区间内同风格 → 同层级
+        4. 在有编号的标题之间递归下一层
+    """
+    if level_idx >= 4 or start >= end:
+        return
+
+    # 在当前区间找第一个有编号的候选（不同父风格）
+    level_style = None
+    split_indices = []
+
+    for i in range(start, end):
+        c = candidates[i]
+        if c.level is not None:
+            continue
+
+        if c.style_key and c.style_key != parent_style:
+            level_style = c.style_key
+            break
+
+    if level_style is None:
+        # 区间内没有有编号的标题 → 全部设为当前层级
+        for i in range(start, end):
+            if candidates[i].level is None:
+                candidates[i].level = LEVEL_NAMES[level_idx]
+        return
+
+    # 遍历区间：分配当前层级
+    for i in range(start, end):
+        c = candidates[i]
+        if c.level is not None:
+            continue
+
+        if c.style_key == level_style:
+            c.level = LEVEL_NAMES[level_idx]
+            split_indices.append(i)
+        elif c.style_key is None:
+            # 无编号标题 → 当前层级
+            c.level = LEVEL_NAMES[level_idx]
+        # 其他有编号风格 → 暂不处理（留给更深递归）
+
+    # 在 split_indices 之间递归下一层
+    for j in range(len(split_indices)):
+        sub_start = split_indices[j] + 1
+        if j + 1 < len(split_indices):
+            sub_end = split_indices[j + 1]
+        else:
+            sub_end = end
+        _assign_level(candidates, sub_start, sub_end, level_style, level_idx + 1)
+
+
+def assign_all_levels(candidates):
+    """
+    对所有标题候选分配层级（h1~h4）。
+
+    先从全局找 h1 风格，再在每个 h1 之间递归找 h2/h3/h4。
+    """
+    if not candidates:
+        return
+
+    # 全局找 h1：第一个有编号的候选
+    h1_style = None
+    h1_indices = []
+
+    for c in candidates:
+        if c.style_key:
+            h1_style = c.style_key
+            break
+
+    if h1_style is None:
+        # 全文档都没有有编号的标题 → 全部 h1
+        for c in candidates:
+            c.level = 'h1'
+        return
+
+    # 分配 h1
+    for i, c in enumerate(candidates):
+        if c.style_key == h1_style:
+            c.level = 'h1'
+            h1_indices.append(i)
+
+    # 在每个 h1 之间递归分配 h2/h3/h4
+    for j in range(len(h1_indices)):
+        sub_start = h1_indices[j] + 1
+        if j + 1 < len(h1_indices):
+            sub_end = h1_indices[j + 1]
+        else:
+            sub_end = len(candidates)
+        _assign_level(candidates, sub_start, sub_end, h1_style, 1)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -294,7 +359,7 @@ def build_level_map(doc, title_para):
 # ═══════════════════════════════════════════════════════════════════
 
 def _set_run_font(run, font_name, font_size, bold=False):
-    """设置单个 run 的字体属性（中西文分别设置）。"""
+    """设置单个 run 的字体属性。"""
     run.font.size = font_size
     run.font.bold = bold
 
@@ -310,7 +375,7 @@ def _set_run_font(run, font_name, font_size, bold=False):
 
 
 def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_indent=None):
-    """设置段落格式（对齐、行距、缩进）。"""
+    """设置段落格式。"""
     paragraph.alignment = alignment
     pf = paragraph.paragraph_format
 
@@ -323,13 +388,7 @@ def _set_paragraph_format(paragraph, alignment, line_spacing=None, first_line_in
 
 
 def apply_style(paragraph, level):
-    """
-    对段落应用指定层级的完整格式。
-
-    参数：
-        paragraph — docx Paragraph 对象
-        level     — 'title' | 'h1' | 'h2' | 'h3' | 'h4' | 'body'
-    """
+    """对段落应用指定层级的完整格式。"""
     if level not in FONT_NAMES:
         return
 
@@ -348,32 +407,43 @@ def apply_style(paragraph, level):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 主流程（v3 重写）
+# 主流程（v4 重写）
 # ═══════════════════════════════════════════════════════════════════
 
 def format_document(doc):
     """
-    两遍扫描格式化文档。
+    三遍扫描格式化文档。
 
-    第一遍：找文档标题 + 构建编号风格→层级映射。
-    第二遍：逐段格式化。
+    第一遍：找文档标题。
+    第二遍：收集标题候选，递归分配层级。
+    第三遍：逐段应用格式。
     """
     # ── 第一遍：找标题 ──
     title_para, title_text = find_title_paragraph(doc)
     if title_para is not None:
         print(f"  识别标题：「{title_text[:40]}{'…' if len(title_text) > 40 else ''}」")
 
-    # ── 第一遍：构建层级映射 ──
-    level_map, unnumbered_level = build_level_map(doc, title_para)
-    if level_map:
-        print(f"  识别到 {len(level_map)} 种编号风格：")
-        for style_key, level in level_map.items():
-            print(f"    {style_key} → {level}")
-        print(f"  无编号标题 → {unnumbered_level}")
-    else:
-        print("  未识别到编号标题，所有标题候选视为 h1")
+    # ── 第二遍：收集标题候选 + 递归分配层级 ──
+    candidates = collect_candidates(doc, title_para)
+    assign_all_levels(candidates)
 
-    # ── 第二遍：逐段格式化 ──
+    # 打印分配结果
+    if candidates:
+        level_counts = {}
+        for c in candidates:
+            level_counts[c.level] = level_counts.get(c.level, 0) + 1
+        parts = [f"    {lvl}×{cnt}" for lvl, cnt in sorted(level_counts.items())]
+        print(f"  标题分配：{' '.join(parts)}")
+        for c in candidates:
+            prefix_info = f"[{c.prefix}]" if c.prefix else "[无编号]"
+            print(f"    {c.level:4s} {prefix_info:12s} {c.text[:40]}")
+
+    # 构建段落→层级查找表
+    para_level = {}
+    for c in candidates:
+        para_level[c.para._element] = c.level
+
+    # ── 第三遍：逐段应用格式 ──
     title_applied = False
 
     for para in doc.paragraphs:
@@ -381,31 +451,24 @@ def format_document(doc):
         if not text:
             continue
 
-        # 跳过 Word 自动目录
         if _is_toc_paragraph(para):
             continue
 
-        # ── 判断层级 ──
+        # 判断层级
         if not title_applied and title_para is not None and para._element is title_para._element:
             level = 'title'
             title_applied = True
-        elif is_title_candidate(text):
-            style_key, _ = classify_numbering(text)
-            if style_key and style_key in level_map:
-                level = level_map[style_key]
-            else:
-                level = unnumbered_level
+        elif para._element in para_level:
+            level = para_level[para._element]
         else:
             level = 'body'
 
         apply_style(para, level)
 
     if not title_applied:
-        print("  未找到明确的标题段落，使用默认正文格式。")
+        print("  未找到明确的标题段落。")
     else:
         print("  标题格式已应用。")
-
-    return doc
 
 
 def main():
@@ -444,7 +507,10 @@ def main():
     doc.save(output_path)
 
     print("✅ 完成！")
-    input("\n按 Enter 键退出……")
+    try:
+        input("\n按 Enter 键退出……")
+    except EOFError:
+        pass
 
 
 if __name__ == '__main__':
