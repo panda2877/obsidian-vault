@@ -800,7 +800,11 @@ def assign_all_levels(candidates):
 # ═══════════════════════════════════════════════════════════════════
 
 def _replace_prefix_in_para(candidate, new_prefix):
-    """替换段落中的编号前缀为新格式。"""
+    """替换段落中的编号前缀为新格式。
+
+    支持多行段落：标题可能嵌在正文段落内（用 \\n 分隔），
+    通过全文定位精确找到旧前缀的位置进行替换。
+    """
     para = candidate.para
     old_prefix = candidate.prefix
     run_indices = candidate.run_indices
@@ -812,17 +816,62 @@ def _replace_prefix_in_para(candidate, new_prefix):
     if first_run_idx >= len(para.runs):
         return
 
-    run = para.runs[first_run_idx]
+    if not old_prefix:
+        # 无旧前缀，直接插入到第一个 run 开头
+        para.runs[first_run_idx].text = new_prefix + para.runs[first_run_idx].text
+        return
 
-    if old_prefix:
-        # 替换旧前缀
+    # ── 判断是否多行段落 ──
+    full_text = para.text
+    if '\n' not in full_text:
+        # 单行段落：当前逻辑即可
+        run = para.runs[first_run_idx]
         if run.text.startswith(old_prefix):
             run.text = new_prefix + run.text[len(old_prefix):]
         elif old_prefix in run.text:
             run.text = run.text.replace(old_prefix, new_prefix, 1)
-    else:
-        # 无旧前缀，直接插入
-        run.text = new_prefix + run.text
+        return
+
+    # ── 多行段落：精确定位 ──
+    # 在全文找到 candidate.text 的偏移
+    candidate_text = candidate.text
+    text_pos = full_text.find(candidate_text)
+    if text_pos == -1:
+        # 回退：全文找不到，在第一个 run 里替换
+        run = para.runs[first_run_idx]
+        if old_prefix in run.text:
+            run.text = run.text.replace(old_prefix, new_prefix, 1)
+        return
+
+    # 计算 old_prefix 在 candidate_text 内的偏移
+    prefix_offset = candidate_text.find(old_prefix)
+    if prefix_offset == -1:
+        return
+
+    # 计算 old_prefix 在全文中的绝对偏移
+    abs_pos = text_pos + prefix_offset
+
+    # 找到包含该偏移的 run
+    acc = 0
+    for r in para.runs:
+        rlen = len(r.text)
+        if acc + rlen > abs_pos:
+            local_pos = abs_pos - acc
+            r_text = r.text
+            # 精确匹配：只替换该位置的旧前缀
+            if r_text[local_pos:local_pos + len(old_prefix)] == old_prefix:
+                r.text = r_text[:local_pos] + new_prefix + r_text[local_pos + len(old_prefix):]
+                return
+            # 回退：在该 run 内替换
+            if old_prefix in r_text:
+                r.text = r_text.replace(old_prefix, new_prefix, 1)
+                return
+        acc += rlen
+
+    # 终极回退
+    run = para.runs[first_run_idx]
+    if old_prefix in run.text:
+        run.text = run.text.replace(old_prefix, new_prefix, 1)
 
 
 def rewrite_numbering(candidates):
