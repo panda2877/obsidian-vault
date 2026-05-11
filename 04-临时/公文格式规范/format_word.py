@@ -571,12 +571,28 @@ def _format_tables(doc):
         table_grid = style
 
     for table in doc.tables:
-        # ── 移除表格自带的 tblBorders（inline 设置会覆盖样式） ──
-        tblPr = table._element.find(qn('w:tblPr'))
+        # ── 清除所有层级的 inline 边框和底色（tblPr + 每行的 tblPrEx） ──
+        tbl_elem = table._element
+
+        # 表级 tblBorders
+        tblPr = tbl_elem.find(qn('w:tblPr'))
         if tblPr is not None:
             old_borders = tblPr.find(qn('w:tblBorders'))
             if old_borders is not None:
                 tblPr.remove(old_borders)
+
+        # 行级 tblPrEx（边框 + shd 会覆盖样式和单元格设置）
+        for tr in tbl_elem.findall(qn('w:tr')):
+            trPrEx = tr.find(qn('w:tblPrEx'))
+            if trPrEx is not None:
+                # 移除行级边框
+                row_borders = trPrEx.find(qn('w:tblBorders'))
+                if row_borders is not None:
+                    trPrEx.remove(row_borders)
+                # 移除行级底色
+                row_shd = trPrEx.find(qn('w:shd'))
+                if row_shd is not None:
+                    trPrEx.remove(row_shd)
 
         table.style = table_grid
 
