@@ -1100,8 +1100,12 @@
       max-width: none;
       z-index: 1001;
       transform: translateX(100%);
-      transition: transform 0.3s ease;
+      transition: transform 0.5s ease;
       box-shadow: -10px 0 30px var(--shadow);
+    }
+
+    .helper-panel.show {
+      transform: translateX(0);
     }
 
     /* 移动端辅助面板遮罩 - 柔和过渡动画 */
@@ -1115,7 +1119,7 @@
       background: rgba(0,0,0,0);
       z-index: 1000;
       opacity: 0;
-      transition: opacity 0.3s ease, background 0.3s ease;
+      transition: opacity 0.5s ease, background 0.5s ease;
       pointer-events: none;
     }
 
