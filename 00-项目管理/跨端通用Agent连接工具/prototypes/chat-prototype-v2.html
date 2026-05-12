@@ -559,27 +559,90 @@
     color: var(--text-secondary);
   }
 
-  /* Input Area */
+  /* Input Area - 新设计 */
   .input-area {
-    padding: 10px 16px 14px;
+    padding: 10px 12px 12px;
     border-top: 1px solid var(--border-card);
     background: var(--bg-secondary);
     flex-shrink: 0;
   }
 
-  .input-toolbar {
+  /* 工具栏行 */
+  .input-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* 大按钮 - 附件 */
+  .tool-btn-large {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 6px;
+    padding: 4px 8px 4px 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
   }
 
-  .tool-btn {
+  .tool-btn-large:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+
+  .tool-btn-large .tool-btn-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(212, 168, 83, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tool-btn-large:hover .tool-btn-icon {
+    background: rgba(212, 168, 83, 0.25);
+  }
+
+  .tool-btn-large .tool-btn-icon svg {
+    width: 14px;
+    height: 14px;
+    color: var(--accent-gold);
+  }
+
+  .tool-btn-large .tool-btn-text {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .tool-btn-large .tool-btn-label {
+    color: var(--text-secondary);
+  }
+
+  /* 小按钮 */
+  .tool-btn-small {
     width: 28px;
     height: 28px;
-    border-radius: var(--radius-btn);
-    border: none;
-    background: transparent;
+    border-radius: 6px;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
@@ -588,17 +651,63 @@
     transition: all 0.2s;
   }
 
-  .tool-btn:hover {
-    background: var(--bg-card);
+  .tool-btn-small:hover {
+    border-color: var(--text-secondary);
     color: var(--text-primary);
   }
 
-  .tool-btn.gold:hover {
-    color: var(--accent-gold);
+  .tool-btn-small svg {
+    width: 14px;
+    height: 14px;
   }
 
-  .tool-spacer { flex: 1; }
+  /* 模型状态 */
+  .model-status {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
 
+  /* 发送按钮 - 亮橙色 */
+  .send-btn {
+    width: 40px;
+    height: 32px;
+    border-radius: 10px;
+    border: none;
+    background: #E85D04;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover {
+    background: #DC2F02;
+  }
+
+  .send-btn:active {
+    transform: scale(0.95);
+  }
+
+  .send-btn-inner {
+    width: 32px;
+    height: 24px;
+    border-radius: 6px;
+    background: #9D0208;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .send-btn-inner svg {
+    width: 12px;
+    height: 12px;
+    color: #fff;
+  }
+
+  /* 输入框行 */
   .input-row {
     display: flex;
     gap: 8px;
@@ -612,11 +721,11 @@
 
   .input-wrapper textarea {
     width: 100%;
-    min-height: 38px;
-    max-height: 100px;
-    padding: 8px 12px;
-    border-radius: var(--radius-input);
-    border: 1px solid var(--border-card);
+    min-height: 44px;
+    max-height: 120px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     background: var(--bg-card);
     color: var(--text-primary);
     font-size: 13px;
@@ -628,30 +737,11 @@
   }
 
   .input-wrapper textarea:focus {
-    border-color: var(--accent-purple);
+    border-color: rgba(255, 255, 255, 0.25);
   }
 
   .input-wrapper textarea::placeholder {
     color: var(--text-secondary);
-  }
-
-  .send-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: var(--radius-input);
-    border: none;
-    background: var(--accent-purple);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-
-  .send-btn:hover {
-    background: #6d28d9;
   }
 
   /* ===== Helper Panel ===== */
@@ -1211,32 +1301,57 @@
         </div>
       </div>
 
+      <!-- Input Area -->
       <div class="input-area">
-        <div class="input-toolbar">
-          <button class="tool-btn tooltip" data-tip="上传附件" onclick="toggleUpload()">
-            <svg class="icon icon-sm" viewBox="0 0 24 24">
-              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-            </svg>
-          </button>
-          <button class="tool-btn gold tooltip" data-tip="新建会话" onclick="newSession()">
-            <svg class="icon icon-sm" viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-          <div class="tool-spacer"></div>
-          <span style="font-size:9px; color:var(--text-secondary);">Ctrl+Enter</span>
+        <!-- 工具栏行 -->
+        <div class="input-toolbar-row">
+          <!-- 左侧按钮组 -->
+          <div class="toolbar-left">
+            <button class="tool-btn-large" onclick="toggleUpload()">
+              <span class="tool-btn-icon">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </span>
+              <span class="tool-btn-text">@</span>
+              <span class="tool-btn-label">附件</span>
+            </button>
+            <button class="tool-btn-small" title="技能">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </button>
+            <button class="tool-btn-small" title="编辑上一条">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- 右侧状态和发送按钮 -->
+          <div class="toolbar-right">
+            <span class="model-status">opus 4.7 · 64.2k / 1M</span>
+            <button class="send-btn" onclick="sendMessage()">
+              <span class="send-btn-inner">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <polyline points="19 12 12 19 5 12"/>
+                </svg>
+              </span>
+            </button>
+          </div>
         </div>
+        
+        <!-- 输入框行 -->
         <div class="input-row">
           <div class="input-wrapper">
             <textarea id="chatInput" placeholder="输入消息..." rows="1" oninput="autoResize(this)"></textarea>
           </div>
-          <button class="send-btn" onclick="sendMessage()">
-            <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
         </div>
       </div>
     </div>
