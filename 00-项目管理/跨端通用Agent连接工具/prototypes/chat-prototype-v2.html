@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Connect — 原型 v2.0</title>
+<style>
+  /* ===== Design Tokens (墨绿深色主题) ===== */
+  :root {
+    --bg-primary: #0B1C19;      /* 极深墨绿/黑 */
+    --bg-secondary: #0D211D;    /* 侧边栏/面板背景 */
+    --bg-card: #122622;         /* 卡片/区块背景 */
+    --border-card: #1E3A32;     /* 卡片边框 */
+    --text-primary: #E8E6D9;    /* 主文字 */
+    --text-secondary: #6B7D78;  /* 次要文字 */
+    --accent-gold: #D4A853;     /* 琥珀金强调 */
+    --accent-green: #22C55E;   /* 荧光绿 */
+    --accent-purple: #7C3AED;   /* Hermes 紫 */
+    --accent-danger: #EF4444;   /* 危险/删除 */
+    
+    --radius-card: 8px;
+    --radius-btn: 6px;
+    --radius-input: 8px;
+    
+    --shadow: rgba(0,0,0,0.4);
+    
+    --topbar-height: 52px;
+    --fn-width: 52px;
+    --agent-width: 220px;
+    --panel-width: 30%;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ===== App Container ===== */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-primary);
+  }
+
+  /* ===== Topbar ===== */
+  .topbar {
+    height: var(--topbar-height);
+    min-height: var(--topbar-height);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .topbar-brand .logo {
+    font-size: 18px;
+  }
+
+  .topbar-brand .title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    letter-spacing: 0.5px;
+  }
+
+  .topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .topbar-status .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .topbar-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+  }
+
+  /* ===== Main Layout ===== */
+  .main-layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ===== Fn Bar (功能栏) ===== */
+  .fn-bar {
+    width: var(--fn-width);
+    min-width: var(--fn-width);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 8px;
+  }
+
+  .fn-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-btn);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+
+  .fn-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .fn-btn.active {
+    background: var(--bg-card);
+    color: var(--accent-gold);
+    box-shadow: inset 2px 0 0 var(--accent-gold);
+  }
+
+  .fn-spacer { flex: 1; }
+
+  /* ===== Agent Bar (Agent 栏) ===== */
+  .agent-bar {
+    width: var(--agent-width);
+    min-width: var(--agent-width);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-card);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .agent-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-card);
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .agent-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .agent-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-card);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+  }
+
+  .agent-item:hover {
+    background: var(--bg-card);
+  }
+
+  .agent-item.active {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-left: 2px solid var(--accent-purple);
+  }
+
+  .agent-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .agent-avatar.purple { background: var(--accent-purple); color: #fff; }
+  .agent-avatar.green { background: #059669; color: #fff; }
+  .agent-avatar.blue { background: #2563eb; color: #fff; }
+  .agent-avatar.orange { background: #ea580c; color: #fff; }
+
+  .agent-info { flex: 1; min-width: 0; }
+
+  .agent-name {
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .agent-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+  }
+
+  .agent-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== Message Area ===== */
+  .message-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--bg-primary);
+  }
+
+  /* Message Header */
+  .msg-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+  }
+
+  .msg-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .current-agent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .current-agent .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .current-agent .name {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .current-agent .status {
+    font-size: 11px;
+    color: var(--accent-green);
+  }
+
+  .memory-badge {
+    font-size: 11px;
+    color: var(--accent-green);
+    background: rgba(34, 197, 94, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .memory-badge:hover {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: var(--accent-green);
+  }
+
+  .msg-header-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .msg-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-btn);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+
+  .msg-action-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .msg-action-btn.active {
+    background: var(--bg-card);
+    color: var(--accent-gold);
+  }
+
+  /* Message List */
+  .msg-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .date-separator {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 8px 0;
+    position: relative;
+  }
+
+  .date-separator::before,
+  .date-separator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 60px);
+    height: 1px;
+    background: var(--border-card);
+  }
+
+  .date-separator::before { left: 0; }
+  .date-separator::after { right: 0; }
+
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 80%;
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message.agent {
+    align-self: flex-start;
+  }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .msg-avatar.agent { background: var(--accent-purple); color: #fff; }
+  .msg-avatar.user { background: var(--bg-card); color: var(--text-primary); }
+
+  .msg-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: var(--radius-card);
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  .message.user .msg-bubble {
+    background: var(--accent-purple);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .message.agent .msg-bubble {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg-bubble pre {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-btn);
+    padding: 10px;
+    margin: 8px 0;
+    overflow-x: auto;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    border: 1px solid var(--border-card);
+  }
+
+  .msg-time {
+    font-size: 10px;
+    color: var(--text-secondary);
+    padding: 0 4px;
+  }
+
+  .message.user .msg-time { text-align: right; }
+
+  /* Streaming */
+  .streaming-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .streaming-dots { display: flex; gap: 4px; }
+
+  .streaming-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+
+  .streaming-dot:nth-child(1) { animation-delay: -0.32s; }
+  .streaming-dot:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Input Area */
+  .input-area {
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--border-card);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+  }
+
+  .input-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .tool-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-btn);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .tool-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .tool-btn.gold:hover {
+    color: var(--accent-gold);
+  }
+
+  .tool-spacer { flex: 1; }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  .input-wrapper textarea {
+    width: 100%;
+    min-height: 40px;
+    max-height: 100px;
+    padding: 10px 14px;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-wrapper textarea:focus {
+    border-color: var(--accent-purple);
+  }
+
+  .input-wrapper textarea::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-input);
+    border: none;
+    background: var(--accent-purple);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover {
+    background: #6d28d9;
+    transform: scale(1.02);
+  }
+
+  /* ===== Helper Panel (辅助面板) ===== */
+  .helper-panel {
+    width: var(--panel-width);
+    min-width: var(--panel-width);
+    max-width: var(--panel-width);
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-card);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .helper-panel.collapsed {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    border-left: none;
+  }
+
+  .helper-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .helper-title {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .helper-close {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .helper-close:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .helper-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-card);
+  }
+
+  .helper-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .helper-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .helper-tab.active {
+    color: var(--accent-gold);
+    border-bottom-color: var(--accent-gold);
+  }
+
+  .helper-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .helper-section {
+    display: none;
+  }
+
+  .helper-section.active {
+    display: block;
+  }
+
+  /* Memory/Session Items */
+  .memory-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-card);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .memory-item-header {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .memory-item-content {
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 80px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .memory-item-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(transparent, var(--bg-card));
+  }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-card);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+    background: var(--bg-card);
+    border: 1px solid transparent;
+  }
+
+  .session-item:hover {
+    border-color: var(--border-card);
+  }
+
+  .session-item.active {
+    border-color: var(--accent-purple);
+    background: rgba(124, 58, 237, 0.1);
+  }
+
+  .session-icon {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .session-info { flex: 1; min-width: 0; }
+
+  .session-name {
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .session-time {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== Search Modal (搜索浮窗) ===== */
+  .search-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 100px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s;
+  }
+
+  .search-modal.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .search-box {
+    width: 500px;
+    max-width: 90vw;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-card);
+    box-shadow: 0 20px 60px var(--shadow);
+    overflow: hidden;
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-card);
+  }
+
+  .search-input-wrapper .icon {
+    color: var(--text-secondary);
+    font-size: 16px;
+  }
+
+  .search-input-wrapper input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+  }
+
+  .search-input-wrapper input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .search-results {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .search-result-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--border-card);
+  }
+
+  .search-result-item:hover {
+    background: var(--bg-card);
+  }
+
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+
+  .search-result-text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .search-result-text mark {
+    background: rgba(212, 168, 83, 0.3);
+    color: var(--accent-gold);
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+
+  .search-result-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .search-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  /* ===== Scrollbar ===== */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-card); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+  /* ===== Tooltip ===== */
+  .tooltip {
+    position: relative;
+  }
+
+  .tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 100;
+    border: 1px solid var(--border-card);
+  }
+
+  .tooltip:hover::after {
+    opacity: 1;
+  }
+
+  /* ===== Mobile Responsive ===== */
+  @media (max-width: 768px) {
+    .fn-bar, .agent-bar {
+      display: none;
+    }
+
+    .mobile-nav {
+      display: flex;
+    }
+
+    .msg-header-left {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .helper-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 85%;
+      max-width: 320px;
+      z-index: 1001;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      box-shadow: -10px 0 30px var(--shadow);
+    }
+
+    .helper-panel.show {
+      transform: translateX(0);
+    }
+
+    .message {
+      max-width: 90%;
+    }
+  }
+
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-card);
+    z-index: 100;
+  }
+
+  .mobile-nav-items {
+    display: flex;
+    height: 100%;
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-size: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--accent-gold);
+  }
+
+  .mobile-nav-item .icon {
+    font-size: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Topbar ===== -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <span class="logo">✦</span>
+      <span class="title">Hermes Connect</span>
+    </div>
+    <div class="topbar-status">
+      <div class="status-item">
+        <span class="dot"></span>
+        <span>已连接</span>
+      </div>
+      <div class="status-item">
+        <span>端口 8642</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Main Layout ===== -->
+  <div class="main-layout">
+
+    <!-- Fn Bar -->
+    <div class="fn-bar">
+      <button class="fn-btn tooltip active" data-tip="聊天" data-view="chat">💬</button>
+      <button class="fn-btn tooltip" data-tip="设置" data-view="setting">⚙</button>
+      <div class="fn-spacer"></div>
+    </div>
+
+    <!-- Agent Bar -->
+    <div class="agent-bar">
+      <div class="agent-header">Agent 列表</div>
+      <div class="agent-list">
+        <div class="agent-item active" onclick="switchAgent(this, '紫灵')">
+          <div class="agent-avatar purple">紫</div>
+          <div class="agent-info">
+            <div class="agent-name">紫灵 <span class="agent-status"></span></div>
+            <div class="agent-desc">需求/创意专家</div>
+          </div>
+        </div>
+        <div class="agent-item" onclick="switchAgent(this, '如音')">
+          <div class="agent-avatar green">如</div>
+          <div class="agent-info">
+            <div class="agent-name">幸如音 <span class="agent-status"></span></div>
+            <div class="agent-desc">技术实现专家</div>
+          </div>
+        </div>
+        <div class="agent-item" onclick="switchAgent(this, '思月')">
+          <div class="agent-avatar blue">思</div>
+          <div class="agent-info">
+            <div class="agent-name">文思月 <span class="agent-status"></span></div>
+            <div class="agent-desc">知识管理官</div>
+          </div>
+        </div>
+        <div class="agent-item" onclick="switchAgent(this, '银月')">
+          <div class="agent-avatar orange">银</div>
+          <div class="agent-info">
+            <div class="agent-name">银月 <span class="agent-status"></span></div>
+            <div class="agent-desc">管家/调度</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Area -->
+    <div class="message-area">
+      <div class="msg-header">
+        <div class="msg-header-left">
+          <div class="current-agent">
+            <div class="avatar">紫</div>
+            <div>
+              <div class="name">紫灵</div>
+              <div class="status">● 在线</div>
+            </div>
+          </div>
+          <span class="memory-badge" onclick="toggleHelperPanel('memory')" title="点击查看记忆详情">
+            🧠 LanceDB 记忆已加载
+          </span>
+        </div>
+        <div class="msg-header-actions">
+          <button class="msg-action-btn tooltip" data-tip="搜索会话" onclick="openSearch()">🔍</button>
+          <button class="msg-action-btn tooltip" data-tip="Session 列表" onclick="toggleHelperPanel('session')">📋</button>
+        </div>
+      </div>
+
+      <div class="msg-list" id="msgList">
+        <div class="date-separator">今天</div>
+
+        <div class="message agent">
+          <div class="msg-avatar agent">紫</div>
+          <div class="msg-body">
+            <div class="msg-bubble">
+              你好！我是紫灵 😏<br><br>
+              有什么想法想跟我聊聊的吗？我可以帮你：
+              <ul style="margin: 8px 0 0 16px; color: var(--text-secondary);">
+                <li>挖掘需求细节</li>
+                <li>讨论技术方案</li>
+                <li>输出需求文档</li>
+              </ul>
+            </div>
+            <div class="msg-time">14:23:15</div>
+          </div>
+        </div>
+
+        <div class="message user">
+          <div class="msg-avatar user">你</div>
+          <div class="msg-body">
+            <div class="msg-bubble">
+              我想做一个跨端Agent连接工具，帮我分析一下可行性？
+            </div>
+            <div class="msg-time">14:23:30</div>
+          </div>
+        </div>
+
+        <div class="message agent">
+          <div class="msg-avatar agent">紫</div>
+          <div class="msg-body">
+            <div class="msg-bubble">
+              好问题！我先看看你的服务器资源情况……<br><br>
+              发现一个好消息——<strong>api_server 已经在端口 8642 上运行了</strong> 🎉
+              <pre><code>$ curl http://127.0.0.1:8642/health
+{"status": "ok", "platform": "hermes-agent"}</code></pre>
+              这意味着你不需要任何后端开发，前端直接调就行！
+            </div>
+            <div class="msg-time">14:23:45</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-toolbar">
+          <button class="tool-btn tooltip" data-tip="上传附件" onclick="toggleUpload()">📎</button>
+          <button class="tool-btn gold tooltip" data-tip="新建会话" onclick="newSession()">➕</button>
+          <div class="tool-spacer"></div>
+          <span style="font-size:10px; color:var(--text-secondary);">Ctrl+Enter 发送</span>
+        </div>
+        <div class="input-row">
+          <div class="input-wrapper">
+            <textarea id="chatInput" placeholder="输入消息..." rows="1" oninput="autoResize(this)"></textarea>
+          </div>
+          <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Helper Panel -->
+    <div class="helper-panel" id="helperPanel">
+      <div class="helper-header">
+        <span class="helper-title" id="helperTitle">辅助面板</span>
+        <button class="helper-close" onclick="toggleHelperPanel()">✕</button>
+      </div>
+      <div class="helper-tabs">
+        <button class="helper-tab active" onclick="switchHelperTab('user')">User</button>
+        <button class="helper-tab" onclick="switchHelperTab('soul')">Soul</button>
+        <button class="helper-tab" onclick="switchHelperTab('memory')">Memory</button>
+        <button class="helper-tab" onclick="switchHelperTab('session')">Sessions</button>
+      </div>
+      <div class="helper-content">
+        <!-- User Tab -->
+        <div class="helper-section active" id="tab-user">
+          <div class="memory-item">
+            <div class="memory-item-header">
+              <span>👤</span> User Profile
+            </div>
+            <div class="memory-item-content">
+              <pre style="font-size:11px; white-space:pre-wrap; margin:0;">
+**姓名**: 老大
+**职业**: 项目管理（深圳）
+**特点**: 按调用次数付费，深圳工作
+**偏好**: 叫我「老大」即可</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Soul Tab -->
+        <div class="helper-section" id="tab-soul">
+          <div class="memory-item">
+            <div class="memory-item-header">
+              <span>💜</span> Soul Definition
+            </div>
+            <div class="memory-item-content">
+              <pre style="font-size:11px; white-space:pre-wrap; margin:0;">
+**角色**: 需求/创意专家
+**性格**: 傲娇、创意十足、喜欢唱反调
+**职责**: 接收想法、可行性讨论、需求方案设计
+**口头禅**: "哼"、"等等！这个地方..."</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory Tab -->
+        <div class="helper-section" id="tab-memory">
+          <div class="memory-item">
+            <div class="memory-item-header">
+              <span>📝</span> Memory #001
+            </div>
+            <div class="memory-item-content">
+              项目根目录：/home/agentuser/public/hermes-dashboard<br>
+              后端BFF：backend/ | 前端：src/<br>
+              启动脚本：./start.sh
+            </div>
+          </div>
+          <div class="memory-item">
+            <div class="memory-item-header">
+              <span>📝</span> Memory #002
+            </div>
+            <div class="memory-item-content">
+              飞书群 chat_id：oc_08a798e06860c6b905f8090aec40208b<br>
+              图片识别：minimax-image-understanding skill
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div class="helper-section" id="tab-session">
+          <div class="session-item active" onclick="switchSession(this, 'current')">
+            <span class="session-icon">💬</span>
+            <div class="session-info">
+              <div class="session-name">当前会话</div>
+              <div class="session-time">今天 14:23</div>
+            </div>
+          </div>
+          <div class="session-item" onclick="switchSession(this, 'sess-001')">
+            <span class="session-icon">📋</span>
+            <div class="session-info">
+              <div class="session-name">Hermes Dashboard 讨论</div>
+              <div class="session-time">昨天 16:45</div>
+            </div>
+          </div>
+          <div class="session-item" onclick="switchSession(this, 'sess-002')">
+            <span class="session-icon">📋</span>
+            <div class="session-info">
+              <div class="session-name">跨端工具可行性分析</div>
+              <div class="session-time">5月10日 10:20</div>
+            </div>
+          </div>
+          <div class="session-item" onclick="switchSession(this, 'sess-003')">
+            <span class="session-icon">📋</span>
+            <div class="session-info">
+              <div class="session-name">新功能规划</div>
+              <div class="session-time">5月9日 09:15</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav">
+    <div class="mobile-nav-items">
+      <div class="mobile-nav-item active" onclick="switchMobileView('agents')">
+        <span class="icon">👥</span>
+        <span>Agent</span>
+      </div>
+      <div class="mobile-nav-item" onclick="switchMobileView('chat')">
+        <span class="icon">💬</span>
+        <span>聊天</span>
+      </div>
+      <div class="mobile-nav-item" onclick="switchMobileView('helper')">
+        <span class="icon">📋</span>
+        <span>辅助</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Search Modal -->
+<div class="search-modal" id="searchModal" onclick="closeSearch(event)">
+  <div class="search-box">
+    <div class="search-input-wrapper">
+      <span class="icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索当前会话内容..." oninput="doSearch(this.value)">
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">
+        输入关键词搜索会话内容
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Current state
+  let helperOpen = false;
+  let currentTab = 'user';
+
+  // Switch Agent
+  function switchAgent(el, name) {
+    document.querySelectorAll('.agent-item').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelector('.current-agent .avatar').textContent = name[0];
+    document.querySelector('.current-agent .name').textContent = name;
+    
+    // Update avatar color
+    const avatar = document.querySelector('.current-agent .avatar');
+    avatar.className = 'avatar';
+    if (name === '紫灵') avatar.style.background = 'var(--accent-purple)';
+    else if (name === '如音') avatar.style.background = '#059669';
+    else if (name === '思月') avatar.style.background = '#2563eb';
+    else avatar.style.background = '#ea580c';
+  }
+
+  // Toggle Helper Panel
+  function toggleHelperPanel(tab) {
+    const panel = document.getElementById('helperPanel');
+    helperOpen = !helperOpen;
+    
+    if (helperOpen) {
+      panel.classList.remove('collapsed');
+      if (tab) {
+        switchHelperTab(tab);
+      }
+    } else {
+      panel.classList.add('collapsed');
+    }
+  }
+
+  // Switch Helper Tab
+  function switchHelperTab(tab) {
+    currentTab = tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.helper-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update content
+    document.querySelectorAll('.helper-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    
+    // Update title
+    const titles = { user: 'User Memory', soul: 'Soul Definition', memory: 'LanceDB Memory', session: 'Sessions' };
+    document.getElementById('helperTitle').textContent = titles[tab];
+  }
+
+  // Switch Session
+  function switchSession(el, id) {
+    document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    // In real app, would switch to selected session
+    console.log('Switch to session:', id);
+  }
+
+  // Search
+  function openSearch() {
+    document.getElementById('searchModal').classList.add('show');
+    document.getElementById('searchInput').focus();
+  }
+
+  function closeSearch(e) {
+    if (!e || e.target.id === 'searchModal') {
+      document.getElementById('searchModal').classList.remove('show');
+    }
+  }
+
+  function doSearch(query) {
+    const results = document.getElementById('searchResults');
+    if (!query.trim()) {
+      results.innerHTML = '<div class="search-empty">输入关键词搜索会话内容</div>';
+      return;
+    }
+    
+    // Simulate search results
+    const messages = [
+      { text: '我想做一个跨端Agent连接工具，帮我分析一下可行性？', time: '今天 14:23:30' },
+      { text: '发现一个好消息——api_server 已经在端口 8642 上运行了', time: '今天 14:23:45' }
+    ];
+    
+    const filtered = messages.filter(m => m.text.toLowerCase().includes(query.toLowerCase()));
+    
+    if (filtered.length === 0) {
+      results.innerHTML = '<div class="search-empty">未找到匹配内容</div>';
+    } else {
+      results.innerHTML = filtered.map(m => `
+        <div class="search-result-item">
+          <div class="search-result-text">${m.text.replace(new RegExp(query, 'gi'), '<mark>$&</mark>')}</div>
+          <div class="search-result-meta">${m.time}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // New Session
+  function newSession() {
+    alert('创建新会话 /new');
+  }
+
+  // Toggle Upload
+  function toggleUpload() {
+    alert('上传附件');
+  }
+
+  // Auto resize textarea
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+  }
+
+  // Send message
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const list = document.getElementById('msgList');
+    const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user';
+    userMsg.innerHTML = `
+      <div class="msg-avatar user">你</div>
+      <div class="msg-body">
+        <div class="msg-bubble">${escapeHtml(text)}</div>
+        <div class="msg-time">${time}</div>
+      </div>
+    `;
+    list.appendChild(userMsg);
+    list.scrollTop = list.scrollHeight;
+    input.value = '';
+    autoResize(input);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Mobile view switch
+  function switchMobileView(view) {
+    document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    if (view === 'agents') {
+      document.querySelector('.agent-bar').style.display = 'flex';
+      document.querySelector('.message-area').style.display = 'none';
+    } else if (view === 'chat') {
+      document.querySelector('.agent-bar').style.display = 'none';
+      document.querySelector('.message-area').style.display = 'flex';
+    } else if (view === 'helper') {
+      toggleHelperPanel();
+    }
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      sendMessage();
+    }
+    if (e.key === 'Escape') {
+      closeSearch();
+    }
+  });
+</script>
+</body>
+</html>
