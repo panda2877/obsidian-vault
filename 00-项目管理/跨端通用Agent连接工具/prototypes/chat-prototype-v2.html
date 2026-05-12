@@ -282,7 +282,7 @@
 
   .agent-item.active {
     background: var(--bg-card);
-    border-left: 2px solid var(--accent-purple);
+    border-left: 2px solid var(--accent-gold);
   }
 
   .agent-avatar {
@@ -542,7 +542,7 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--accent-purple);
+    background: var(--accent-gold);
     animation: bounce 1.4s infinite ease-in-out both;
   }
 
@@ -667,13 +667,13 @@
     color: var(--text-secondary);
   }
 
-  /* 发送按钮 - 紫色主题 */
+  /* 发送按钮 - 琥珀金 */
   .send-btn {
     width: 36px;
     height: 36px;
     border-radius: 10px;
     border: none;
-    background: var(--accent-purple);
+    background: var(--accent-gold);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -683,7 +683,7 @@
   }
 
   .send-btn:hover {
-    background: #6d28d9;
+    background: #c49a4a;
   }
 
   .send-btn:active {
@@ -693,7 +693,7 @@
   .send-btn svg {
     width: 16px;
     height: 16px;
-    color: #fff;
+    color: #1a1a1a;
   }
 
   /* 输入框行 */
@@ -875,8 +875,8 @@
   }
 
   .session-item.active {
-    border-color: var(--accent-purple);
-    background: rgba(124, 58, 237, 0.1);
+    border-color: var(--accent-gold);
+    background: rgba(212, 168, 83, 0.1);
   }
 
   .session-icon {
@@ -1104,7 +1104,7 @@
       box-shadow: -10px 0 30px var(--shadow);
     }
 
-    /* 移动端辅助面板遮罩 */
+    /* 移动端辅助面板遮罩 - 柔和过渡动画 */
     .helper-overlay {
       display: none;
       position: fixed;
@@ -1112,12 +1112,18 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0);
       z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease, background 0.3s ease;
+      pointer-events: none;
     }
 
     .helper-overlay.show {
       display: block;
+      opacity: 1;
+      background: rgba(0,0,0,0.5);
+      pointer-events: auto;
     }
 
     .message {
@@ -1284,7 +1290,7 @@
       <div class="msg-header">
         <div class="msg-header-left">
           <!-- 移动端返回按钮 -->
-          <button class="back-btn" onclick="showAgentList()" title="返回Agent列表">
+          <button class="back-btn" onclick="switchMobileView('agents')" title="返回Agent列表">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
@@ -1750,17 +1756,60 @@
     
     const agentBar = document.querySelector('.agent-bar');
     const msgArea = document.querySelector('.message-area');
+    const panel = document.getElementById('helperPanel');
+    const overlay = document.getElementById('helperOverlay');
     
     if (view === 'agents') {
       if (agentBar) agentBar.style.display = 'flex';
       if (msgArea) msgArea.style.display = 'none';
+      // 关闭辅助面板
+      if (panel) {
+        panel.classList.remove('show');
+        panel.classList.add('collapsed');
+      }
+      if (overlay) overlay.classList.remove('show');
     } else if (view === 'chat') {
       if (agentBar) agentBar.style.display = 'none';
       if (msgArea) msgArea.style.display = 'flex';
+      // 关闭辅助面板
+      if (panel) {
+        panel.classList.remove('show');
+        panel.classList.add('collapsed');
+      }
+      if (overlay) overlay.classList.remove('show');
     } else if (view === 'helper') {
-      toggleHelperPanel();
+      // 移动端打开辅助面板
+      if (panel) {
+        panel.classList.remove('collapsed');
+        panel.classList.add('show');
+      }
+      if (overlay) overlay.classList.add('show');
+      // 隐藏聊天区域
+      if (msgArea) msgArea.style.display = 'none';
+      if (agentBar) agentBar.style.display = 'none';
     }
   }
+
+  // 点击遮罩关闭辅助面板
+  document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('helperOverlay');
+    if (overlay) {
+      overlay.addEventListener('click', function() {
+        const panel = document.getElementById('helperPanel');
+        if (panel) {
+          panel.classList.remove('show');
+          panel.classList.add('collapsed');
+        }
+        overlay.classList.remove('show');
+        // 返回聊天视图
+        const msgArea = document.querySelector('.message-area');
+        if (msgArea) msgArea.style.display = 'flex';
+        // 重置mobile nav状态
+        document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.mobile-nav-item')[1].classList.add('active');
+      });
+    }
+  });
 
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
