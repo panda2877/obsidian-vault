@@ -1,5 +1,20 @@
 # 跨端通用Agent连接工具
 
+## 项目概述
+
+跨端通用 Agent 连接工具（hermes-connect）：一套代码三端运行（Web / PC / 移动），作为 Hermes Agent 的官方跨端客户端。
+
+## 技术架构
+
+```
+uni-app 前端 ──→ BFF 服务层（必选，8643） ──→ Hermes 层（8642）
+                         │
+                   Memory Service
+                   （内嵌 LanceDB）
+```
+
+详见：[[docs/需求文档-v0.1|需求文档]] | [[docs/技术方案-v0.2|技术方案]] | [[docs/部署文档-v1.0|部署文档]]
+
 ## 设计风格
 
 ### 配色方案
