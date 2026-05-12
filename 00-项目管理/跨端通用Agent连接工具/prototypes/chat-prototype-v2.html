@@ -3,42 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hermes Connect — 原型 v2.0</title>
+<title>Hermes Connect — 原型 v2.1</title>
 <style>
   /* ===== Design Tokens (墨绿深色主题) ===== */
   :root {
-    --bg-primary: #0B1C19;      /* 极深墨绿/黑 */
-    --bg-secondary: #0D211D;    /* 侧边栏/面板背景 */
-    --bg-card: #122622;         /* 卡片/区块背景 */
-    --border-card: #1E3A32;     /* 卡片边框 */
-    --text-primary: #E8E6D9;    /* 主文字 */
-    --text-secondary: #6B7D78;  /* 次要文字 */
-    --accent-gold: #D4A853;     /* 琥珀金强调 */
-    --accent-green: #22C55E;   /* 荧光绿 */
-    --accent-purple: #7C3AED;   /* Hermes 紫 */
-    --accent-danger: #EF4444;   /* 危险/删除 */
+    --bg-primary: #0B1C19;
+    --bg-secondary: #0D211D;
+    --bg-card: #122622;
+    --border-card: #1E3A32;
+    --text-primary: #E8E6D9;
+    --text-secondary: #6B7D78;
+    --accent-gold: #D4A853;
+    --accent-green: #22C55E;
+    --accent-purple: #7C3AED;
     
     --radius-card: 8px;
     --radius-btn: 6px;
     --radius-input: 8px;
     
     --shadow: rgba(0,0,0,0.4);
-    
-    --topbar-height: 52px;
+    --topbar-height: 56px;
     --fn-width: 52px;
-    --agent-width: 220px;
+    --agent-width: 200px;
     --panel-width: 30%;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     background: var(--bg-primary);
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
+  }
+
+  /* ===== SVG Icon Base ===== */
+  .icon {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  
+  .icon-sm {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .icon-lg {
+    width: 20px;
+    height: 20px;
   }
 
   /* ===== App Container ===== */
@@ -60,40 +79,114 @@
     justify-content: space-between;
     padding: 0 16px;
     flex-shrink: 0;
+    gap: 16px;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
   .topbar-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .topbar-brand .logo {
-    font-size: 18px;
+    color: var(--accent-gold);
+    font-size: 16px;
   }
 
   .topbar-brand .title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--accent-gold);
-    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
   }
 
-  .topbar-status {
+  .topbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-card);
+  }
+
+  /* Session Info */
+  .session-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .session-info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .session-info-item .label {
+    opacity: 0.7;
+  }
+
+  .session-info-item .value {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .session-info-item .value.gold {
+    color: var(--accent-gold);
+  }
+
+  .topbar-right {
     display: flex;
     align-items: center;
     gap: 16px;
   }
 
-  .topbar-status .status-item {
+  /* Milestone Progress */
+  .milestone-badge {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .milestone-badge .progress-bar {
+    width: 60px;
+    height: 4px;
+    background: var(--border-card);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .milestone-badge .progress-fill {
+    height: 100%;
+    background: var(--accent-green);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .milestone-badge .progress-text {
     color: var(--text-secondary);
   }
 
-  .topbar-status .dot {
+  /* Connection Status */
+  .connection-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .connection-status .dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -107,7 +200,7 @@
     overflow: hidden;
   }
 
-  /* ===== Fn Bar (功能栏) ===== */
+  /* ===== Fn Bar ===== */
   .fn-bar {
     width: var(--fn-width);
     min-width: var(--fn-width);
@@ -117,7 +210,7 @@
     flex-direction: column;
     align-items: center;
     padding: 12px 0;
-    gap: 8px;
+    gap: 4px;
   }
 
   .fn-btn {
@@ -131,7 +224,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
     transition: all 0.2s;
   }
 
@@ -148,7 +240,7 @@
 
   .fn-spacer { flex: 1; }
 
-  /* ===== Agent Bar (Agent 栏) ===== */
+  /* ===== Agent Bar ===== */
   .agent-bar {
     width: var(--agent-width);
     min-width: var(--agent-width);
@@ -159,9 +251,9 @@
   }
 
   .agent-header {
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-card);
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -170,18 +262,18 @@
   .agent-list {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 6px;
   }
 
   .agent-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: var(--radius-card);
     cursor: pointer;
     transition: all 0.2s;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .agent-item:hover {
@@ -190,31 +282,37 @@
 
   .agent-item.active {
     background: var(--bg-card);
-    border: 1px solid var(--border-card);
     border-left: 2px solid var(--accent-purple);
   }
 
   .agent-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--bg-card);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
-    flex-shrink: 0;
   }
 
-  .agent-avatar.purple { background: var(--accent-purple); color: #fff; }
-  .agent-avatar.green { background: #059669; color: #fff; }
-  .agent-avatar.blue { background: #2563eb; color: #fff; }
-  .agent-avatar.orange { background: #ea580c; color: #fff; }
+  .agent-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .agent-avatar .initial {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
 
   .agent-info { flex: 1; min-width: 0; }
 
   .agent-name {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -222,19 +320,16 @@
   }
 
   .agent-status {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--accent-green);
   }
 
   .agent-desc {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-top: 1px;
   }
 
   /* ===== Message Area ===== */
@@ -248,7 +343,7 @@
 
   /* Message Header */
   .msg-header {
-    padding: 12px 20px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border-card);
     display: flex;
     align-items: center;
@@ -260,7 +355,7 @@
   .msg-header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
   }
 
   .current-agent {
@@ -270,42 +365,54 @@
   }
 
   .current-agent .avatar {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: var(--accent-purple);
+    overflow: hidden;
+    background: var(--bg-card);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+  }
+
+  .current-agent .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .current-agent .avatar .initial {
+    font-size: 10px;
     font-weight: 600;
-    color: #fff;
   }
 
   .current-agent .name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
   }
 
-  .current-agent .status {
-    font-size: 11px;
-    color: var(--accent-green);
-  }
-
   .memory-badge {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--accent-green);
     background: rgba(34, 197, 94, 0.1);
-    padding: 4px 10px;
-    border-radius: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
     border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .memory-badge:hover {
-    background: rgba(34, 197, 94, 0.2);
+    background: rgba(34, 197, 94, 0.15);
     border-color: var(--accent-green);
+  }
+
+  .memory-badge svg {
+    width: 12px;
+    height: 12px;
   }
 
   .msg-header-actions {
@@ -314,8 +421,8 @@
   }
 
   .msg-action-btn {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--radius-btn);
     border: none;
     background: transparent;
@@ -324,7 +431,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
     transition: all 0.2s;
   }
 
@@ -342,16 +448,16 @@
   .msg-list {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .date-separator {
     text-align: center;
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: 10px;
     padding: 8px 0;
     position: relative;
   }
@@ -361,7 +467,7 @@
     content: '';
     position: absolute;
     top: 50%;
-    width: calc(50% - 60px);
+    width: calc(50% - 50px);
     height: 1px;
     background: var(--border-card);
   }
@@ -372,7 +478,7 @@
   .message {
     display: flex;
     gap: 10px;
-    max-width: 80%;
+    max-width: 75%;
   }
 
   .message.user {
@@ -384,62 +490,41 @@
     align-self: flex-start;
   }
 
-  .msg-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .msg-avatar.agent { background: var(--accent-purple); color: #fff; }
-  .msg-avatar.user { background: var(--bg-card); color: var(--text-primary); }
-
-  .msg-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
+  /* 统一的气泡样式 */
   .msg-bubble {
     padding: 10px 14px;
     border-radius: var(--radius-card);
     font-size: 13px;
     line-height: 1.6;
     word-break: break-word;
-  }
-
-  .message.user .msg-bubble {
-    background: var(--accent-purple);
-    color: #fff;
-    border-bottom-right-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text-primary);
   }
 
   .message.agent .msg-bubble {
-    background: var(--bg-card);
-    color: var(--text-primary);
     border-bottom-left-radius: 4px;
+  }
+
+  .message.user .msg-bubble {
+    border-bottom-right-radius: 4px;
+    background: var(--bg-card);
   }
 
   .msg-bubble pre {
     background: var(--bg-secondary);
     border-radius: var(--radius-btn);
-    padding: 10px;
-    margin: 8px 0;
+    padding: 8px;
+    margin: 6px 0;
     overflow-x: auto;
     font-size: 12px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     border: 1px solid var(--border-card);
   }
 
   .msg-time {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-secondary);
-    padding: 0 4px;
+    padding: 2px 4px 0;
   }
 
   .message.user .msg-time { text-align: right; }
@@ -469,9 +554,14 @@
     40% { transform: scale(1); opacity: 1; }
   }
 
+  .streaming-text {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
   /* Input Area */
   .input-area {
-    padding: 12px 20px 16px;
+    padding: 10px 16px 14px;
     border-top: 1px solid var(--border-card);
     background: var(--bg-secondary);
     flex-shrink: 0;
@@ -480,13 +570,13 @@
   .input-toolbar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 4px;
+    margin-bottom: 6px;
   }
 
   .tool-btn {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--radius-btn);
     border: none;
     background: transparent;
@@ -495,7 +585,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
     transition: all 0.2s;
   }
 
@@ -512,7 +601,7 @@
 
   .input-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: flex-end;
   }
 
@@ -523,9 +612,9 @@
 
   .input-wrapper textarea {
     width: 100%;
-    min-height: 40px;
+    min-height: 38px;
     max-height: 100px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: var(--radius-input);
     border: 1px solid var(--border-card);
     background: var(--bg-card);
@@ -547,8 +636,8 @@
   }
 
   .send-btn {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--radius-input);
     border: none;
     background: var(--accent-purple);
@@ -557,17 +646,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
     transition: all 0.2s;
     flex-shrink: 0;
   }
 
   .send-btn:hover {
     background: #6d28d9;
-    transform: scale(1.02);
   }
 
-  /* ===== Helper Panel (辅助面板) ===== */
+  /* ===== Helper Panel ===== */
   .helper-panel {
     width: var(--panel-width);
     min-width: var(--panel-width);
@@ -588,7 +675,7 @@
   }
 
   .helper-header {
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-card);
     display: flex;
     align-items: center;
@@ -596,13 +683,13 @@
   }
 
   .helper-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
   }
 
   .helper-close {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 4px;
     border: none;
     background: transparent;
@@ -611,7 +698,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    transition: all 0.2s;
   }
 
   .helper-close:hover {
@@ -626,11 +713,11 @@
 
   .helper-tab {
     flex: 1;
-    padding: 10px;
+    padding: 8px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
@@ -649,7 +736,7 @@
   .helper-content {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
+    padding: 10px;
   }
 
   .helper-section {
@@ -660,7 +747,7 @@
     display: block;
   }
 
-  /* Memory/Session Items */
+  /* Memory Items - 自适应高度 */
   .memory-item {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
@@ -670,7 +757,7 @@
   }
 
   .memory-item-header {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     margin-bottom: 6px;
     display: flex;
@@ -681,26 +768,21 @@
   .memory-item-content {
     font-size: 12px;
     line-height: 1.5;
-    max-height: 80px;
-    overflow: hidden;
-    position: relative;
+    /* 移除固定高度，让内容自适应 */
   }
 
-  .memory-item-content::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 24px;
-    background: linear-gradient(transparent, var(--bg-card));
+  .memory-item-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
+  /* Session Items */
   .session-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: var(--radius-card);
     cursor: pointer;
     transition: all 0.2s;
@@ -719,7 +801,6 @@
   }
 
   .session-icon {
-    font-size: 14px;
     color: var(--text-secondary);
   }
 
@@ -738,7 +819,7 @@
     color: var(--text-secondary);
   }
 
-  /* ===== Search Modal (搜索浮窗) ===== */
+  /* ===== Search Modal ===== */
   .search-modal {
     position: fixed;
     top: 0;
@@ -749,7 +830,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 100px;
+    padding-top: 80px;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
@@ -762,26 +843,25 @@
   }
 
   .search-box {
-    width: 500px;
+    width: 480px;
     max-width: 90vw;
     background: var(--bg-secondary);
     border-radius: var(--radius-card);
     border: 1px solid var(--border-card);
-    box-shadow: 0 20px 60px var(--shadow);
+    box-shadow: 0 16px 48px var(--shadow);
     overflow: hidden;
   }
 
   .search-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
+    gap: 10px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--border-card);
   }
 
   .search-input-wrapper .icon {
     color: var(--text-secondary);
-    font-size: 16px;
   }
 
   .search-input-wrapper input {
@@ -798,12 +878,12 @@
   }
 
   .search-results {
-    max-height: 400px;
+    max-height: 360px;
     overflow-y: auto;
   }
 
   .search-result-item {
-    padding: 12px 16px;
+    padding: 10px 14px;
     cursor: pointer;
     transition: background 0.2s;
     border-bottom: 1px solid var(--border-card);
@@ -818,12 +898,13 @@
   }
 
   .search-result-text {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
+    color: var(--text-primary);
   }
 
   .search-result-text mark {
-    background: rgba(212, 168, 83, 0.3);
+    background: rgba(212, 168, 83, 0.25);
     color: var(--accent-gold);
     padding: 0 2px;
     border-radius: 2px;
@@ -836,10 +917,10 @@
   }
 
   .search-empty {
-    padding: 40px;
+    padding: 32px;
     text-align: center;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   /* ===== Scrollbar ===== */
@@ -856,12 +937,12 @@
   .tooltip::after {
     content: attr(data-tip);
     position: absolute;
-    bottom: -30px;
+    bottom: -28px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--bg-card);
     color: var(--text-primary);
-    font-size: 11px;
+    font-size: 10px;
     padding: 4px 8px;
     border-radius: 4px;
     white-space: nowrap;
@@ -891,13 +972,17 @@
       gap: 8px;
     }
 
+    .session-info {
+      display: none;
+    }
+
     .helper-panel {
       position: fixed;
       top: 0;
       right: 0;
       bottom: 0;
       width: 85%;
-      max-width: 320px;
+      max-width: 300px;
       z-index: 1001;
       transform: translateX(100%);
       transition: transform 0.3s ease;
@@ -909,7 +994,7 @@
     }
 
     .message {
-      max-width: 90%;
+      max-width: 88%;
     }
   }
 
@@ -919,7 +1004,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: 52px;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-card);
     z-index: 100;
@@ -936,9 +1021,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     color: var(--text-secondary);
-    font-size: 10px;
+    font-size: 9px;
     cursor: pointer;
     transition: color 0.2s;
   }
@@ -948,7 +1033,8 @@
   }
 
   .mobile-nav-item .icon {
-    font-size: 20px;
+    width: 18px;
+    height: 18px;
   }
 </style>
 </head>
@@ -957,17 +1043,34 @@
 
   <!-- ===== Topbar ===== -->
   <div class="topbar">
-    <div class="topbar-brand">
-      <span class="logo">✦</span>
-      <span class="title">Hermes Connect</span>
-    </div>
-    <div class="topbar-status">
-      <div class="status-item">
-        <span class="dot"></span>
-        <span>已连接</span>
+    <div class="topbar-left">
+      <div class="topbar-brand">
+        <span class="logo">✦</span>
+        <span class="title">Hermes Connect</span>
       </div>
-      <div class="status-item">
-        <span>端口 8642</span>
+      <div class="topbar-divider"></div>
+      <div class="session-info">
+        <div class="session-info-item">
+          <span class="label">模型</span>
+          <span class="value gold">minimax-main</span>
+        </div>
+        <div class="session-info-item">
+          <span class="label">上下文</span>
+          <span class="value">2,847 / 32,768</span>
+        </div>
+        <div class="milestone-badge">
+          <span class="label">MS7</span>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 25%"></div>
+          </div>
+          <span class="progress-text">25%</span>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="connection-status">
+        <span class="dot"></span>
+        <span>已连接 · 8642</span>
       </div>
     </div>
   </div>
@@ -977,8 +1080,17 @@
 
     <!-- Fn Bar -->
     <div class="fn-bar">
-      <button class="fn-btn tooltip active" data-tip="聊天" data-view="chat">💬</button>
-      <button class="fn-btn tooltip" data-tip="设置" data-view="setting">⚙</button>
+      <button class="fn-btn tooltip active" data-tip="聊天" data-view="chat">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+      <button class="fn-btn tooltip" data-tip="设置" data-view="setting">
+        <svg class="icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
       <div class="fn-spacer"></div>
     </div>
 
@@ -987,30 +1099,40 @@
       <div class="agent-header">Agent 列表</div>
       <div class="agent-list">
         <div class="agent-item active" onclick="switchAgent(this, '紫灵')">
-          <div class="agent-avatar purple">紫</div>
+          <div class="agent-avatar">
+            <img src="ziling.png" alt="紫灵" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+            <span class="initial" style="display:none">紫</span>
+          </div>
           <div class="agent-info">
             <div class="agent-name">紫灵 <span class="agent-status"></span></div>
             <div class="agent-desc">需求/创意专家</div>
           </div>
         </div>
         <div class="agent-item" onclick="switchAgent(this, '如音')">
-          <div class="agent-avatar green">如</div>
+          <div class="agent-avatar">
+            <span class="initial">如</span>
+          </div>
           <div class="agent-info">
-            <div class="agent-name">幸如音 <span class="agent-status"></span></div>
+            <div class="agent-name">幸如音</div>
             <div class="agent-desc">技术实现专家</div>
           </div>
         </div>
         <div class="agent-item" onclick="switchAgent(this, '思月')">
-          <div class="agent-avatar blue">思</div>
+          <div class="agent-avatar">
+            <img src="wensiyue.png" alt="文思月" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+            <span class="initial" style="display:none">思</span>
+          </div>
           <div class="agent-info">
-            <div class="agent-name">文思月 <span class="agent-status"></span></div>
+            <div class="agent-name">文思月</div>
             <div class="agent-desc">知识管理官</div>
           </div>
         </div>
         <div class="agent-item" onclick="switchAgent(this, '银月')">
-          <div class="agent-avatar orange">银</div>
+          <div class="agent-avatar">
+            <span class="initial">银</span>
+          </div>
           <div class="agent-info">
-            <div class="agent-name">银月 <span class="agent-status"></span></div>
+            <div class="agent-name">银月</div>
             <div class="agent-desc">管家/调度</div>
           </div>
         </div>
@@ -1022,19 +1144,35 @@
       <div class="msg-header">
         <div class="msg-header-left">
           <div class="current-agent">
-            <div class="avatar">紫</div>
-            <div>
-              <div class="name">紫灵</div>
-              <div class="status">● 在线</div>
+            <div class="avatar">
+              <img src="ziling.png" alt="紫灵" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'" style="width:100%;height:100%;object-fit:cover;">
+              <span class="initial" style="display:none">紫</span>
             </div>
+            <span class="name">紫灵</span>
           </div>
           <span class="memory-badge" onclick="toggleHelperPanel('memory')" title="点击查看记忆详情">
-            🧠 LanceDB 记忆已加载
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+              <path d="M12 2a9 9 0 0 0-9 9c0 3.6 2.4 6.5 6 8.5V22h6v-2.5c3.6-2 6-4.9 6-8.5a9 9 0 0 0-9-9z"></path>
+              <path d="M12 2v4"></path>
+            </svg>
+            记忆已加载
           </span>
         </div>
         <div class="msg-header-actions">
-          <button class="msg-action-btn tooltip" data-tip="搜索会话" onclick="openSearch()">🔍</button>
-          <button class="msg-action-btn tooltip" data-tip="Session 列表" onclick="toggleHelperPanel('session')">📋</button>
+          <button class="msg-action-btn tooltip" data-tip="搜索会话" onclick="openSearch()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+          <button class="msg-action-btn tooltip" data-tip="Session 列表" onclick="toggleHelperPanel('session')">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -1042,58 +1180,63 @@
         <div class="date-separator">今天</div>
 
         <div class="message agent">
-          <div class="msg-avatar agent">紫</div>
-          <div class="msg-body">
-            <div class="msg-bubble">
-              你好！我是紫灵 😏<br><br>
-              有什么想法想跟我聊聊的吗？我可以帮你：
-              <ul style="margin: 8px 0 0 16px; color: var(--text-secondary);">
-                <li>挖掘需求细节</li>
-                <li>讨论技术方案</li>
-                <li>输出需求文档</li>
-              </ul>
-            </div>
-            <div class="msg-time">14:23:15</div>
+          <div class="msg-bubble">
+            你好！我是紫灵 😏<br><br>
+            有什么想法想跟我聊聊的吗？我可以帮你：
+            <ul style="margin: 8px 0 0 16px; color: var(--text-secondary);">
+              <li>挖掘需求细节</li>
+              <li>讨论技术方案</li>
+              <li>输出需求文档</li>
+            </ul>
           </div>
+          <div class="msg-time">14:23:15</div>
         </div>
 
         <div class="message user">
-          <div class="msg-avatar user">你</div>
-          <div class="msg-body">
-            <div class="msg-bubble">
-              我想做一个跨端Agent连接工具，帮我分析一下可行性？
-            </div>
-            <div class="msg-time">14:23:30</div>
+          <div class="msg-bubble">
+            我想做一个跨端Agent连接工具，帮我分析一下可行性？
           </div>
+          <div class="msg-time">14:23:30</div>
         </div>
 
         <div class="message agent">
-          <div class="msg-avatar agent">紫</div>
-          <div class="msg-body">
-            <div class="msg-bubble">
-              好问题！我先看看你的服务器资源情况……<br><br>
-              发现一个好消息——<strong>api_server 已经在端口 8642 上运行了</strong> 🎉
-              <pre><code>$ curl http://127.0.0.1:8642/health
+          <div class="msg-bubble">
+            好问题！我先看看你的服务器资源情况……<br><br>
+            发现一个好消息——<strong>api_server 已经在端口 8642 上运行了</strong> 🎉
+            <pre><code>$ curl http://127.0.0.1:8642/health
 {"status": "ok", "platform": "hermes-agent"}</code></pre>
-              这意味着你不需要任何后端开发，前端直接调就行！
-            </div>
-            <div class="msg-time">14:23:45</div>
+            这意味着你不需要任何后端开发，前端直接调就行！
           </div>
+          <div class="msg-time">14:23:45</div>
         </div>
       </div>
 
       <div class="input-area">
         <div class="input-toolbar">
-          <button class="tool-btn tooltip" data-tip="上传附件" onclick="toggleUpload()">📎</button>
-          <button class="tool-btn gold tooltip" data-tip="新建会话" onclick="newSession()">➕</button>
+          <button class="tool-btn tooltip" data-tip="上传附件" onclick="toggleUpload()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          </button>
+          <button class="tool-btn gold tooltip" data-tip="新建会话" onclick="newSession()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
           <div class="tool-spacer"></div>
-          <span style="font-size:10px; color:var(--text-secondary);">Ctrl+Enter 发送</span>
+          <span style="font-size:9px; color:var(--text-secondary);">Ctrl+Enter</span>
         </div>
         <div class="input-row">
           <div class="input-wrapper">
             <textarea id="chatInput" placeholder="输入消息..." rows="1" oninput="autoResize(this)"></textarea>
           </div>
-          <button class="send-btn" onclick="sendMessage()">➤</button>
+          <button class="send-btn" onclick="sendMessage()">
+            <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -1102,7 +1245,12 @@
     <div class="helper-panel" id="helperPanel">
       <div class="helper-header">
         <span class="helper-title" id="helperTitle">辅助面板</span>
-        <button class="helper-close" onclick="toggleHelperPanel()">✕</button>
+        <button class="helper-close" onclick="toggleHelperPanel()">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
       <div class="helper-tabs">
         <button class="helper-tab active" onclick="switchHelperTab('user')">User</button>
@@ -1115,13 +1263,16 @@
         <div class="helper-section active" id="tab-user">
           <div class="memory-item">
             <div class="memory-item-header">
-              <span>👤</span> User Profile
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              User Profile
             </div>
             <div class="memory-item-content">
-              <pre style="font-size:11px; white-space:pre-wrap; margin:0;">
-**姓名**: 老大
+              <pre>**姓名**: 老大
 **职业**: 项目管理（深圳）
-**特点**: 按调用次数付费，深圳工作
+**特点**: 按调用次数付费
 **偏好**: 叫我「老大」即可</pre>
             </div>
           </div>
@@ -1131,14 +1282,16 @@
         <div class="helper-section" id="tab-soul">
           <div class="memory-item">
             <div class="memory-item-header">
-              <span>💜</span> Soul Definition
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M12 2a9 9 0 0 0-9 9c0 3.6 2.4 6.5 6 8.5V22h6v-2.5c3.6-2 6-4.9 6-8.5a9 9 0 0 0-9-9z"></path>
+              </svg>
+              Soul Definition
             </div>
             <div class="memory-item-content">
-              <pre style="font-size:11px; white-space:pre-wrap; margin:0;">
-**角色**: 需求/创意专家
-**性格**: 傲娇、创意十足、喜欢唱反调
-**职责**: 接收想法、可行性讨论、需求方案设计
-**口头禅**: "哼"、"等等！这个地方..."</pre>
+              <pre>**角色**: 需求/创意专家
+**性格**: 傲娇、创意十足
+**职责**: 接收想法、可行性讨论
+**口头禅**: "哼"、"等等！"</pre>
             </div>
           </div>
         </div>
@@ -1147,17 +1300,24 @@
         <div class="helper-section" id="tab-memory">
           <div class="memory-item">
             <div class="memory-item-header">
-              <span>📝</span> Memory #001
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M12 2a9 9 0 0 0-9 9c0 3.6 2.4 6.5 6 8.5V22h6v-2.5c3.6-2 6-4.9 6-8.5a9 9 0 0 0-9-9z"></path>
+                <path d="M12 2v4"></path>
+              </svg>
+              Memory #001
             </div>
             <div class="memory-item-content">
               项目根目录：/home/agentuser/public/hermes-dashboard<br>
-              后端BFF：backend/ | 前端：src/<br>
-              启动脚本：./start.sh
+              后端BFF：backend/ | 前端：src/ | 启动脚本：./start.sh
             </div>
           </div>
           <div class="memory-item">
             <div class="memory-item-header">
-              <span>📝</span> Memory #002
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M12 2a9 9 0 0 0-9 9c0 3.6 2.4 6.5 6 8.5V22h6v-2.5c3.6-2 6-4.9 6-8.5a9 9 0 0 0-9-9z"></path>
+                <path d="M12 2v4"></path>
+              </svg>
+              Memory #002
             </div>
             <div class="memory-item-content">
               飞书群 chat_id：oc_08a798e06860c6b905f8090aec40208b<br>
@@ -1169,28 +1329,47 @@
         <!-- Sessions Tab -->
         <div class="helper-section" id="tab-session">
           <div class="session-item active" onclick="switchSession(this, 'current')">
-            <span class="session-icon">💬</span>
+            <span class="session-icon">
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </span>
             <div class="session-info">
               <div class="session-name">当前会话</div>
               <div class="session-time">今天 14:23</div>
             </div>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-001')">
-            <span class="session-icon">📋</span>
+            <span class="session-icon">
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </span>
             <div class="session-info">
               <div class="session-name">Hermes Dashboard 讨论</div>
               <div class="session-time">昨天 16:45</div>
             </div>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-002')">
-            <span class="session-icon">📋</span>
+            <span class="session-icon">
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </span>
             <div class="session-info">
               <div class="session-name">跨端工具可行性分析</div>
               <div class="session-time">5月10日 10:20</div>
             </div>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-003')">
-            <span class="session-icon">📋</span>
+            <span class="session-icon">
+              <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </span>
             <div class="session-info">
               <div class="session-name">新功能规划</div>
               <div class="session-time">5月9日 09:15</div>
@@ -1205,15 +1384,26 @@
   <div class="mobile-nav">
     <div class="mobile-nav-items">
       <div class="mobile-nav-item active" onclick="switchMobileView('agents')">
-        <span class="icon">👥</span>
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
         <span>Agent</span>
       </div>
       <div class="mobile-nav-item" onclick="switchMobileView('chat')">
-        <span class="icon">💬</span>
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
         <span>聊天</span>
       </div>
       <div class="mobile-nav-item" onclick="switchMobileView('helper')">
-        <span class="icon">📋</span>
+        <svg class="icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
         <span>辅助</span>
       </div>
     </div>
@@ -1223,38 +1413,30 @@
 
 <!-- Search Modal -->
 <div class="search-modal" id="searchModal" onclick="closeSearch(event)">
-  <div class="search-box">
+  <div class="search-box" onclick="event.stopPropagation()">
     <div class="search-input-wrapper">
-      <span class="icon">🔍</span>
+      <svg class="icon icon-sm" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
       <input type="text" id="searchInput" placeholder="搜索当前会话内容..." oninput="doSearch(this.value)">
     </div>
     <div class="search-results" id="searchResults">
-      <div class="search-empty">
-        输入关键词搜索会话内容
-      </div>
+      <div class="search-empty">输入关键词搜索会话内容</div>
     </div>
   </div>
 </div>
 
 <script>
   // Current state
-  let helperOpen = false;
+  let helperOpen = true;
   let currentTab = 'user';
 
   // Switch Agent
   function switchAgent(el, name) {
     document.querySelectorAll('.agent-item').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    document.querySelector('.current-agent .avatar').textContent = name[0];
     document.querySelector('.current-agent .name').textContent = name;
-    
-    // Update avatar color
-    const avatar = document.querySelector('.current-agent .avatar');
-    avatar.className = 'avatar';
-    if (name === '紫灵') avatar.style.background = 'var(--accent-purple)';
-    else if (name === '如音') avatar.style.background = '#059669';
-    else if (name === '思月') avatar.style.background = '#2563eb';
-    else avatar.style.background = '#ea580c';
   }
 
   // Toggle Helper Panel
@@ -1264,9 +1446,7 @@
     
     if (helperOpen) {
       panel.classList.remove('collapsed');
-      if (tab) {
-        switchHelperTab(tab);
-      }
+      if (tab) switchHelperTab(tab);
     } else {
       panel.classList.add('collapsed');
     }
@@ -1275,16 +1455,10 @@
   // Switch Helper Tab
   function switchHelperTab(tab) {
     currentTab = tab;
-    
-    // Update tab buttons
     document.querySelectorAll('.helper-tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    
-    // Update content
     document.querySelectorAll('.helper-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
-    
-    // Update title
     const titles = { user: 'User Memory', soul: 'Soul Definition', memory: 'LanceDB Memory', session: 'Sessions' };
     document.getElementById('helperTitle').textContent = titles[tab];
   }
@@ -1293,7 +1467,6 @@
   function switchSession(el, id) {
     document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
     el.classList.add('active');
-    // In real app, would switch to selected session
     console.log('Switch to session:', id);
   }
 
@@ -1315,15 +1488,11 @@
       results.innerHTML = '<div class="search-empty">输入关键词搜索会话内容</div>';
       return;
     }
-    
-    // Simulate search results
     const messages = [
       { text: '我想做一个跨端Agent连接工具，帮我分析一下可行性？', time: '今天 14:23:30' },
       { text: '发现一个好消息——api_server 已经在端口 8642 上运行了', time: '今天 14:23:45' }
     ];
-    
     const filtered = messages.filter(m => m.text.toLowerCase().includes(query.toLowerCase()));
-    
     if (filtered.length === 0) {
       results.innerHTML = '<div class="search-empty">未找到匹配内容</div>';
     } else {
@@ -1361,15 +1530,11 @@
     const list = document.getElementById('msgList');
     const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
 
-    // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'message user';
     userMsg.innerHTML = `
-      <div class="msg-avatar user">你</div>
-      <div class="msg-body">
-        <div class="msg-bubble">${escapeHtml(text)}</div>
-        <div class="msg-time">${time}</div>
-      </div>
+      <div class="msg-bubble">${escapeHtml(text)}</div>
+      <div class="msg-time">${time}</div>
     `;
     list.appendChild(userMsg);
     list.scrollTop = list.scrollHeight;
@@ -1387,26 +1552,12 @@
   function switchMobileView(view) {
     document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
     event.currentTarget.classList.add('active');
-    
-    if (view === 'agents') {
-      document.querySelector('.agent-bar').style.display = 'flex';
-      document.querySelector('.message-area').style.display = 'none';
-    } else if (view === 'chat') {
-      document.querySelector('.agent-bar').style.display = 'none';
-      document.querySelector('.message-area').style.display = 'flex';
-    } else if (view === 'helper') {
-      toggleHelperPanel();
-    }
   }
 
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'Enter') {
-      sendMessage();
-    }
-    if (e.key === 'Escape') {
-      closeSearch();
-    }
+    if (e.ctrlKey && e.key === 'Enter') sendMessage();
+    if (e.key === 'Escape') closeSearch();
   });
 </script>
 </body>
