@@ -332,6 +332,278 @@
     margin-top: 1px;
   }
 
+  /* ===== View Tabs (Agent / 项目) ===== */
+  .view-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-card);
+    flex-shrink: 0;
+  }
+
+  .view-tab {
+    flex: 1;
+    padding: 9px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .view-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .view-tab.active {
+    color: var(--accent-gold);
+    border-bottom-color: var(--accent-gold);
+  }
+
+  /* ===== Project Tree ===== */
+  .project-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 4px;
+    display: none;
+  }
+
+  .project-tree.show {
+    display: block;
+  }
+
+  .tree-node {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 12px;
+    line-height: 1.4;
+    position: relative;
+  }
+
+  .tree-node:hover {
+    background: var(--bg-card);
+  }
+
+  .tree-node.selected {
+    background: rgba(212, 168, 83, 0.12);
+  }
+
+  .tree-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    font-size: 10px;
+    transition: transform 0.2s;
+    user-select: none;
+  }
+
+  .tree-toggle.expanded {
+    transform: rotate(90deg);
+  }
+
+  .tree-toggle.hidden {
+    visibility: hidden;
+  }
+
+  .tree-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-gold);
+    font-size: 12px;
+  }
+
+  .tree-icon.project {
+    color: var(--accent-gold);
+  }
+
+  .tree-icon.milestone {
+    color: var(--accent-purple);
+  }
+
+  .tree-icon.task {
+    color: var(--text-secondary);
+  }
+
+  .tree-label {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+  }
+
+  .tree-label.task-label {
+    font-size: 11px;
+  }
+
+  .tree-add-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: all 0.15s;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .tree-node:hover .tree-add-btn {
+    opacity: 1;
+  }
+
+  .tree-add-btn:hover {
+    background: var(--bg-card);
+    color: var(--accent-green);
+  }
+
+  .assignee-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(212, 168, 83, 0.12);
+    color: var(--accent-gold);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .assignee-badge:hover {
+    background: rgba(212, 168, 83, 0.25);
+  }
+
+  .tree-children {
+    display: none;
+  }
+
+  .tree-children.expanded {
+    display: block;
+  }
+
+  /* ===== File / Code Explorer ===== */
+  .explorer-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0;
+  }
+
+  .explorer-tree {
+    flex: 1;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border-card);
+    padding: 6px 4px;
+    min-height: 40%;
+  }
+
+  .explorer-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    min-height: 40%;
+  }
+
+  .explorer-preview pre {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  .explorer-preview .preview-header {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-card);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .explorer-preview .preview-header .file-icon {
+    color: var(--accent-gold);
+  }
+
+  .explorer-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  .file-tree-item, .code-tree-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-secondary);
+    transition: background 0.15s;
+  }
+
+  .file-tree-item:hover, .code-tree-item:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .file-tree-item.active, .code-tree-item.active {
+    color: var(--accent-gold);
+    background: rgba(212, 168, 83, 0.08);
+  }
+
+  .file-tree-item .item-icon, .code-tree-item .item-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .file-tree-item .item-name, .code-tree-item .item-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== Session Assignee ===== */
+  .session-assignee {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--accent-purple);
+    flex-shrink: 0;
+  }
+
   /* ===== Message Area ===== */
   .message-area {
     flex: 1;
@@ -1246,8 +1518,11 @@
 
     <!-- Agent Bar -->
     <div class="agent-bar">
-      <div class="agent-header">Agent 列表</div>
-      <div class="agent-list">
+      <div class="view-tabs">
+        <button class="view-tab active" onclick="switchViewTab('agents')">Agent</button>
+        <button class="view-tab" onclick="switchViewTab('projects')">项目</button>
+      </div>
+      <div class="agent-list" id="agentListView">
         <div class="agent-item active" onclick="switchAgent(this, '紫灵')">
           <div class="agent-avatar">
             <img src="wensiyue.png" alt="紫灵" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
@@ -1284,6 +1559,82 @@
           <div class="agent-info">
             <div class="agent-name">银月</div>
             <div class="agent-desc">管家/调度</div>
+          </div>
+        </div>
+      </div>
+      <div class="project-tree" id="projectTreeView">
+        <!-- 跨端通用Agent连接工具 (项目) -->
+        <div>
+          <div class="tree-node" onclick="toggleTreeNode(this)">
+            <span class="tree-toggle expanded">▸</span>
+            <span class="tree-icon project">📁</span>
+            <span class="tree-label">跨端通用Agent连接工具</span>
+            <button class="tree-add-btn" onclick="event.stopPropagation();alert('新建里程碑')" title="新建里程碑">+</button>
+          </div>
+          <div class="tree-children expanded" style="padding-left:20px">
+            <!-- MS7 -->
+            <div>
+              <div class="tree-node" onclick="toggleTreeNode(this)">
+                <span class="tree-toggle expanded">▸</span>
+                <span class="tree-icon milestone">📂</span>
+                <span class="tree-label">MS7 — 可行性分析</span>
+                <button class="tree-add-btn" onclick="event.stopPropagation();alert('新建任务')" title="新建任务">+</button>
+              </div>
+              <div class="tree-children expanded" style="padding-left:20px">
+                <div class="tree-node" onclick="switchAgentFromTree('紫灵')">
+                  <span class="tree-toggle hidden">▸</span>
+                  <span class="tree-icon task">📄</span>
+                  <span class="tree-label task-label">[M1.1] 需求调研与场景分析</span>
+                  <span class="assignee-badge">紫灵</span>
+                </div>
+                <div class="tree-node" onclick="switchAgentFromTree('紫灵')">
+                  <span class="tree-toggle hidden">▸</span>
+                  <span class="tree-icon task">📄</span>
+                  <span class="tree-label task-label">[M1.2] 技术方案预研</span>
+                  <span class="assignee-badge">紫灵</span>
+                </div>
+              </div>
+            </div>
+            <!-- MS8 -->
+            <div>
+              <div class="tree-node" onclick="toggleTreeNode(this)">
+                <span class="tree-toggle expanded">▸</span>
+                <span class="tree-icon milestone">📂</span>
+                <span class="tree-label">MS8 — 看板功能迁移和项目模式</span>
+                <button class="tree-add-btn" onclick="event.stopPropagation();alert('新建任务')" title="新建任务">+</button>
+              </div>
+              <div class="tree-children expanded" style="padding-left:20px">
+                <div class="tree-node" onclick="switchAgentFromTree('紫灵')">
+                  <span class="tree-toggle hidden">▸</span>
+                  <span class="tree-icon task">📄</span>
+                  <span class="tree-label task-label">[M8.1] 看板功能迁移和项目模式需求分析</span>
+                  <span class="assignee-badge">紫灵</span>
+                </div>
+                <div class="tree-node" onclick="switchAgentFromTree('如音')">
+                  <span class="tree-toggle hidden">▸</span>
+                  <span class="tree-icon task">📄</span>
+                  <span class="tree-label task-label">[M8.2] 看板功能迁移和项目模式技术方案研究</span>
+                  <span class="assignee-badge">如音</span>
+                </div>
+              </div>
+            </div>
+            <!-- MS9 -->
+            <div>
+              <div class="tree-node" onclick="toggleTreeNode(this)">
+                <span class="tree-toggle expanded">▸</span>
+                <span class="tree-icon milestone">📂</span>
+                <span class="tree-label">MS9 — BFF层整合记忆系统</span>
+                <button class="tree-add-btn" onclick="event.stopPropagation();alert('新建任务')" title="新建任务">+</button>
+              </div>
+              <div class="tree-children expanded" style="padding-left:20px">
+                <div class="tree-node" onclick="switchAgentFromTree('紫灵')">
+                  <span class="tree-toggle hidden">▸</span>
+                  <span class="tree-icon task">📄</span>
+                  <span class="tree-label task-label">[M9.1] BFF层整合记忆系统需求分析</span>
+                  <span class="assignee-badge">紫灵</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1437,6 +1788,8 @@
         <button class="helper-tab" onclick="switchHelperTab('soul')">Soul</button>
         <button class="helper-tab" onclick="switchHelperTab('memory')">Memory</button>
         <button class="helper-tab" onclick="switchHelperTab('session')">Sessions</button>
+        <button class="helper-tab" onclick="switchHelperTab('files')">文件</button>
+        <button class="helper-tab" onclick="switchHelperTab('code')">代码</button>
       </div>
       <div class="helper-content">
         <!-- User Tab -->
@@ -1518,6 +1871,7 @@
               <div class="session-name">当前会话</div>
               <div class="session-time">今天 14:23</div>
             </div>
+            <span class="session-assignee">紫灵</span>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-001')">
             <span class="session-icon">
@@ -1530,6 +1884,7 @@
               <div class="session-name">Hermes Dashboard 讨论</div>
               <div class="session-time">昨天 16:45</div>
             </div>
+            <span class="session-assignee">如音</span>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-002')">
             <span class="session-icon">
@@ -1542,6 +1897,7 @@
               <div class="session-name">跨端工具可行性分析</div>
               <div class="session-time">5月10日 10:20</div>
             </div>
+            <span class="session-assignee">紫灵</span>
           </div>
           <div class="session-item" onclick="switchSession(this, 'sess-003')">
             <span class="session-icon">
@@ -1553,6 +1909,87 @@
             <div class="session-info">
               <div class="session-name">新功能规划</div>
               <div class="session-time">5月9日 09:15</div>
+            </div>
+            <span class="session-assignee">思月</span>
+          </div>
+        </div>
+        <!-- 文件 Tab -->
+        <div class="helper-section" id="tab-files">
+          <div class="explorer-pane">
+            <div class="explorer-tree">
+              <div class="file-tree-item" onclick="selectFileItem(this, 'docs/需求文档-v0.1.md')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">需求文档-v0.1.md</span>
+              </div>
+              <div class="file-tree-item" onclick="selectFileItem(this, 'docs/技术方案-v0.2.md')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">技术方案-v0.2.md</span>
+              </div>
+              <div class="file-tree-item" onclick="selectFileItem(this, 'docs/可行性分析报告-v0.1.md')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">可行性分析报告-v0.1.md</span>
+              </div>
+              <div class="file-tree-item" onclick="selectFileItem(this, 'docs/部署文档-v1.0.md')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">部署文档-v1.0.md</span>
+              </div>
+              <div class="file-tree-item" onclick="selectFileItem(this, 'prototypes/chat-prototype-v2.html')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">chat-prototype-v2.html</span>
+              </div>
+              <div class="file-tree-item" onclick="selectFileItem(this, 'prototypes/chat-prototype-v1.html')">
+                <span class="item-icon">📄</span>
+                <span class="item-name">chat-prototype-v1.html</span>
+              </div>
+            </div>
+            <div class="explorer-preview" id="filePreview">
+              <div class="explorer-empty">← 点击左侧文件查看预览</div>
+            </div>
+          </div>
+        </div>
+        <!-- 代码 Tab -->
+        <div class="helper-section" id="tab-code">
+          <div class="explorer-pane">
+            <div class="explorer-tree">
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/')">
+                <span class="item-icon">📁</span>
+                <span class="item-name">src/ (前端 uni-app)</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/pages/')" style="padding-left:20px">
+                <span class="item-icon">📁</span>
+                <span class="item-name">pages/</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/pages/index/index.vue')" style="padding-left:34px">
+                <span class="item-icon">📄</span>
+                <span class="item-name">index/index.vue</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/pages/chat/chat.vue')" style="padding-left:34px">
+                <span class="item-icon">📄</span>
+                <span class="item-name">chat/chat.vue</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/api/')" style="padding-left:20px">
+                <span class="item-icon">📁</span>
+                <span class="item-name">api/</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'src/api/index.ts')" style="padding-left:34px">
+                <span class="item-icon">📄</span>
+                <span class="item-name">index.ts</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'backend/')">
+                <span class="item-icon">📁</span>
+                <span class="item-name">backend/ (BFF)</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'backend/routes/')" style="padding-left:20px">
+                <span class="item-icon">📁</span>
+                <span class="item-name">routes/</span>
+              </div>
+              <div class="code-tree-item" onclick="selectCodeItem(this, 'backend/routes/kanban.ts')" style="padding-left:34px">
+                <span class="item-icon">📄</span>
+                <span class="item-name">kanban.ts</span>
+              </div>
+            </div>
+            <div class="explorer-preview" id="codePreview">
+              <div class="explorer-empty">← 点击左侧文件查看代码预览</div>
             </div>
           </div>
         </div>
@@ -1619,6 +2056,90 @@
     document.querySelector('.current-agent .name').textContent = name;
   }
 
+  // Switch View Tab (Agent / 项目)
+  function switchViewTab(tab) {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    const agentList = document.getElementById('agentListView');
+    const projectTree = document.getElementById('projectTreeView');
+    if (tab === 'agents') {
+      if (agentList) agentList.style.display = 'block';
+      if (projectTree) projectTree.classList.remove('show');
+    } else {
+      if (agentList) agentList.style.display = 'none';
+      if (projectTree) projectTree.classList.add('show');
+    }
+  }
+
+  // Toggle Tree Node (expand/collapse)
+  function toggleTreeNode(el) {
+    const toggle = el.querySelector('.tree-toggle');
+    const children = el.nextElementSibling;
+    if (!toggle || !children || !children.classList.contains('tree-children')) return;
+    const isExpanded = toggle.classList.contains('expanded');
+    if (isExpanded) {
+      toggle.classList.remove('expanded');
+      children.classList.remove('expanded');
+    } else {
+      toggle.classList.add('expanded');
+      children.classList.add('expanded');
+    }
+  }
+
+  // Switch Agent from Tree (任务节点点击)
+  function switchAgentFromTree(name) {
+    // Find agent item in agent list
+    const agentItems = document.querySelectorAll('.agent-item');
+    let found = false;
+    agentItems.forEach(item => {
+      const nameEl = item.querySelector('.agent-name');
+      if (nameEl && nameEl.textContent.trim().startsWith(name)) {
+        item.classList.add('active');
+        found = true;
+      } else {
+        item.classList.remove('active');
+      }
+    });
+    if (found) {
+      document.querySelector('.current-agent .name').textContent = name;
+    }
+  }
+
+  // Select File Item (文件预览)
+  function selectFileItem(el, path) {
+    document.querySelectorAll('.file-tree-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    const preview = document.getElementById('filePreview');
+    if (!preview) return;
+    const fileName = path.split('/').pop();
+    const ext = fileName.split('.').pop();
+    let content = '';
+    if (ext === 'md') {
+      content = `# ${fileName}\n\n> 这是一个示例 Markdown 文件\n\n## 概述\n\n这是 ${path} 的文件预览内容。在实际应用中，此处将显示文件的实际内容。\n\n## 功能列表\n\n- 支持 Markdown 渲染\n- 支持代码高亮\n- 支持文件树导航`;
+    } else if (ext === 'html') {
+      content = `<!DOCTYPE html>\n<html>\n<head>\n  <title>${fileName}</title>\n</head>\n<body>\n  <h1>${fileName}</h1>\n  <p>这是 ${path} 的预览内容</p>\n</body>\n</html>`;
+    }
+    preview.innerHTML = `<div class="preview-header"><span class="file-icon">📄</span> ${path}</div><pre>${escapeHtml(content)}</pre>`;
+  }
+
+  // Select Code Item (代码预览)
+  function selectCodeItem(el, path) {
+    document.querySelectorAll('.code-tree-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    const preview = document.getElementById('codePreview');
+    if (!preview) return;
+    const fileName = path.split('/').pop();
+    let content = '';
+    if (path.endsWith('.vue')) {
+      content = '&lt;template&gt;\n  &lt;view class="container"&gt;\n    &lt;text&gt;{{ message }}&lt;/text&gt;\n  &lt;/view&gt;\n&lt;/template&gt;\n\n&lt;script&gt;\nexport default {\n  data() {\n    return { message: \'Hello from ' + fileName + '\' }\n  }\n}\n&lt;\/script&gt;\n\n&lt;style scoped&gt;\n.container { padding: 20px; }\n&lt;/style&gt;';
+    } else if (path.endsWith('.ts')) {
+      content = 'import { defineComponent } from \'vue\'\n\nexport default defineComponent({\n  name: \'' + fileName.replace('.ts', '') + '\',\n  setup() {\n    const data = ref([])\n    const loading = ref(false)\n\n    async function fetchData() {\n      loading.value = true\n      try {\n        const res = await api.get(\'/' + path.replace('.ts', '') + '\')\n        data.value = res.data\n      } finally {\n        loading.value = false\n      }\n    }\n\n    return { data, loading, fetchData }\n  }\n})';
+    } else if (path.endsWith('/')) {
+      content = '// ' + path + ' 目录\n// 包含以下文件：\n// - 子目录和模块入口';
+    }
+    preview.innerHTML = '<div class="preview-header"><span class="file-icon">📄</span> ' + path + '</div><pre>' + escapeHtml(content) + '</pre>';
+  }
+
   // Toggle Helper Panel
   function toggleHelperPanel(tab) {
     const panel = document.getElementById('helperPanel');
@@ -1664,7 +2185,7 @@
     event.target.classList.add('active');
     document.querySelectorAll('.helper-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
-    const titles = { user: 'User Memory', soul: 'Soul Definition', memory: 'LanceDB Memory', session: 'Sessions' };
+    const titles = { user: 'User Memory', soul: 'Soul Definition', memory: 'LanceDB Memory', session: 'Sessions', files: '项目文件', code: '代码浏览' };
     document.getElementById('helperTitle').textContent = titles[tab];
   }
 
